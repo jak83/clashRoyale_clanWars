@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clash Royale War Tracker</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>River Race Status</h1>
+            <div id="loading" class="status-indicator">Loading...</div>
+            <div id="clan-name" class="clan-title"></div>
+        </header>
+
+        <main>
+            <div class="summary-card">
+                <div class="stat-box">
+                    <span class="stat-label">War Day</span>
+                    <span id="war-day" class="stat-value">-</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-label">Incomplete</span>
+                    <span id="incomplete-count" class="stat-value">-</span>
+                </div>
+            </div>
+
+            <div class="player-list-container">
+                <h2>Players Remaining</h2>
+                <div id="player-list" class="player-grid">
+                    <!-- Players will be injected here -->
+                </div>
+            </div>
+
+            <div class="player-list-container completed-section">
+                <button id="toggle-completed" class="toggle-btn">Show Completed Players</button>
+                <div id="completed-list" class="player-grid hidden">
+                    <!-- Completed players injected here -->
+                </div>
+            </div>
+
+            <div id="last-war-section" class="hidden">
+                <h2>Last War Stats</h2>
+                <div id="last-war-summary" class="summary-box"></div>
+                <div id="last-war-list" class="player-list">
+                    <!-- Last war stats will be populated here -->
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="app.js"></script>
+</body>
+
+</html>
