@@ -273,7 +273,10 @@ function createDayFilters(days, table) {
         btn.dataset.day = day;
 
         // Gray out if no data
-        const hasData = daysWithData.includes(String(day).trim());
+        const dayStr = String(day).trim();
+        const hasData = daysWithData.includes(dayStr);
+        console.log(`Day ${day}: dayStr="${dayStr}", daysWithData=${JSON.stringify(daysWithData)}, hasData=${hasData}`);
+
         if (!hasData) {
             btn.classList.add('no-data');
             btn.title = 'No data available for this day';
@@ -307,10 +310,13 @@ function checkDaysWithData(table) {
 
         const dayMatch = th.textContent.match(/Day (\d+)/);
         if (dayMatch) {
-            daysWithData.push(String(dayMatch[1]).trim());
+            const dayNum = String(dayMatch[1]).trim();
+            daysWithData.push(dayNum);
+            console.log(`Found day ${dayNum} in table header`);
         }
     });
 
+    console.log('Days with data:', daysWithData);
     return daysWithData;
 }
 
