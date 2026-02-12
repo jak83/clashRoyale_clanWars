@@ -27,50 +27,20 @@
         <main>
             <!-- Navigation Tabs -->
             <div class="tabs">
-                <button class="tab-btn active" data-tab="live">Live Status</button>
-                <button class="tab-btn" data-tab="history">Daily History</button>
+                <button class="tab-btn active" data-tab="history">Daily History</button>
                 <button class="tab-btn" data-tab="last-war">Last War</button>
             </div>
 
-            <!-- LIVE VIEW -->
-            <div id="view-live" class="tab-content active">
-                <div class="war-status-container">
-                    <h2 id="war-status">Checking war status...</h2>
-                    <p id="war-dates" class="war-dates"></p>
-                </div>
-
-                <div class="summary-card">
-                    <div class="stat-box">
-                        <span class="stat-label">War Day</span>
-                        <span id="war-day" class="stat-value">-</span>
-                    </div>
-                    <div class="stat-box">
-                        <span class="stat-label">Incomplete</span>
-                        <span id="incomplete-count" class="stat-value">-</span>
-                    </div>
-                </div>
-
-                <div class="player-list-container">
-                    <h2>Players Remaining Today</h2>
-                    <div id="player-list" class="player-grid">
-                        <!-- Players will be injected here -->
-                    </div>
-                </div>
-
-                <div class="player-list-container completed-section">
-                    <button id="toggle-completed" class="toggle-btn">Show Completed Players</button>
-                    <div id="completed-list" class="player-grid hidden">
-                        <!-- Completed players injected here -->
-                    </div>
-                </div>
-            </div>
-
             <!-- HISTORY VIEW -->
-            <div id="view-history" class="tab-content hidden">
+            <div id="view-history" class="tab-content active">
                 <div class="history-controls">
                     <button id="refresh-history" class="action-btn">Refresh History</button>
                     <button id="toggle-history-completed" class="action-btn"
                         style="margin-left: 1rem; background-color: var(--accent-blue);">Hide Completed</button>
+                </div>
+                <!-- Day Filter Buttons -->
+                <div id="day-filter-buttons" class="day-filters" style="margin: 1rem 0; display: none;">
+                    <!-- Day buttons injected here by JS -->
                 </div>
                 <div id="history-container" class="history-table-container">
                     <!-- History Table injected here -->

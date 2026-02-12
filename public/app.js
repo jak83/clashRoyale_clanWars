@@ -1,11 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
-    fetchRaceData();
-
-    document.getElementById('toggle-completed').addEventListener('click', function () {
-        const list = document.getElementById('completed-list');
-        list.classList.toggle('hidden');
-        this.textContent = list.classList.contains('hidden') ? 'Show Completed Players' : 'Hide Completed Players';
-    });
+    // Load history by default
+    fetchHistory();
 
     // Tab Handling
     document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -394,6 +389,7 @@ function filterByDay(selectedDay, table, activeBtn, silent = false) {
 
 async function fetchRaceData() {
     const statusEl = document.getElementById('loading');
+    if (statusEl) statusEl.textContent = 'Loading...';
 
     try {
         const response = await fetch('/api/race');
@@ -403,12 +399,18 @@ async function fetchRaceData() {
 
         const data = await response.json();
         renderData(data);
-        statusEl.textContent = 'Updated just now';
-        statusEl.style.color = 'var(--accent-green)';
+        if (statusEl) {
+            statusEl.textContent = 'Updated just now';
+            statusEl.style.color = 'var(--accent-green)';
+        }
+        return data;
     } catch (error) {
         console.error('Fetch error:', error);
-        statusEl.textContent = 'Error loading data. Check console/server logs.';
-        statusEl.style.color = 'var(--accent-red)';
+        if (statusEl) {
+            statusEl.textContent = 'Error loading data. Check console/server logs.';
+            statusEl.style.color = 'var(--accent-red)';
+        }
+        return null;
     }
 }
 
@@ -506,8 +508,11 @@ function renderLastWarLog(data, clanTag) {
 }
 
 function renderData(data) {
-    if (data.clan) {
-        document.getElementById('clan-name').textContent = `${data.clan.name} (${data.clan.tag})`;
+    // Live view elements removed - this function is now only used internally
+    // All DOM manipulations are skipped if elements don't exist
+    const clanNameEl = document.getElementById('clan-name');
+    if (data.clan && clanNameEl) {
+        clanNameEl.textContent = `${data.clan.name} (${data.clan.tag})`;
     }
 
     const isTrainingDay = data.periodType === 'training';
@@ -518,6 +523,9 @@ function renderData(data) {
     const playerList = document.getElementById('player-list');
     const completedList = document.getElementById('completed-list');
     const toggleBtn = document.getElementById('toggle-completed');
+
+    // Skip rendering if live view elements don't exist
+    if (!warStatusEl || !playerList) return;
 
     // 1. War Status Indicator
     if (isTrainingDay) {
