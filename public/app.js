@@ -282,9 +282,10 @@ function createDayFilters(days, table) {
         if (!hasData) {
             btn.classList.add('no-data');
             btn.title = 'No data available for this day';
-        } else {
-            btn.addEventListener('click', () => filterByDay(day, table, btn));
         }
+
+        // Add click listener to all buttons (even grayed out ones)
+        btn.addEventListener('click', () => filterByDay(day, table, btn));
 
         filterContainer.appendChild(btn);
     });
@@ -323,6 +324,30 @@ function filterByDay(selectedDay, table, activeBtn, silent = false) {
     if (!silent) {
         document.querySelectorAll('.day-filter-btn').forEach(btn => btn.classList.remove('active'));
         activeBtn.classList.add('active');
+    }
+
+    // Check if selected day has data
+    const container = document.getElementById('history-container');
+    if (selectedDay !== 'all') {
+        const headerCells = table.querySelectorAll('thead th');
+        let dayExists = false;
+        headerCells.forEach((th) => {
+            const dayMatch = th.textContent.match(/Day (\d+)/);
+            if (dayMatch && dayMatch[1] === String(selectedDay)) {
+                dayExists = true;
+            }
+        });
+
+        if (!dayExists) {
+            container.innerHTML = `<div class="training-message" style="text-align: center; padding: 2rem; font-size: 1.2rem;">WAR DAY ${selectedDay} has not yet started</div>`;
+            return;
+        }
+    }
+
+    // Restore table if it was replaced with message
+    if (!container.querySelector('.history-table')) {
+        container.innerHTML = '';
+        container.appendChild(table);
     }
 
     // Get all column indices (0 = player name, 1+ = days)
