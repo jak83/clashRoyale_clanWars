@@ -338,17 +338,6 @@ h2 {
         margin-bottom: 0.75rem;
     }
 
-    /* Demo controls */
-    .demo-buttons {
-        flex-wrap: wrap;
-        gap: 0.3rem !important;
-    }
-
-    .btn-demo {
-        font-size: 0.7rem;
-        padding: 0.3rem 0.5rem;
-    }
-
     /* Sections */
     section {
         margin-bottom: 1rem;
@@ -491,35 +480,6 @@ h2 {
     color: var(--accent-blue);
 }
 
-/* Demo Banner */
-.demo-banner {
-    background-color: var(--accent-red);
-    color: white;
-    text-align: center;
-    padding: 0.5rem;
-    margin-bottom: 1rem;
-    border-radius: 8px;
-    font-weight: 600;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding-left: 1rem;
-    padding-right: 1rem;
-    animation: fadeIn 0.5s ease-in-out;
-}
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
 /* Day Filter Buttons */
 .day-filters {
     display: flex;
@@ -552,27 +512,6 @@ h2 {
     opacity: 0.4;
     background: var(--card-bg);
     color: var(--text-secondary);
-}
-
-/* Demo Buttons Grid */
-.demo-buttons {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-}
-
-.btn-demo {
-    background: var(--accent-red);
-    color: white;
-    padding: 0.5rem 1rem;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    flex: 1;
-}
-
-.btn-demo:hover {
-    background: #ff4d4d;
 }
 
 /* Controls Row */

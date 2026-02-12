@@ -55,66 +55,6 @@ document.addEventListener('DOMContentLoaded', () => {
             else toggleHistoryBtn.style.backgroundColor = 'var(--accent-blue)';
         });
     }
-
-    // Demo Buttons (Day 1-4)
-    document.querySelectorAll('.btn-demo').forEach(btn => {
-        btn.addEventListener('click', async () => {
-            // User requested no popups. Removing confirm.
-
-            const days = parseInt(btn.dataset.days);
-
-            try {
-                const res = await fetch('/api/demo/load', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ days: days })
-                });
-
-                if (res.ok) {
-                    const responseData = await res.json();
-                    console.log(`Demo data for ${days} days loaded!`);
-
-                    // Show Disclaimer
-                    const banner = document.getElementById('demo-disclaimer');
-                    if (banner) banner.classList.remove('hidden');
-
-                    // Manually switch to history tab WITHOUT triggering fetchHistory
-                    // Deactivate all tabs
-                    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-                    document.querySelectorAll('.tab-content').forEach(c => {
-                        c.classList.remove('active');
-                        c.classList.add('hidden');
-                    });
-
-                    // Activate History tab UI
-                    const historyBtn = document.querySelector('[data-tab="history"]');
-                    if (historyBtn) historyBtn.classList.add('active');
-
-                    const historyContent = document.getElementById('view-history');
-                    if (historyContent) {
-                        historyContent.classList.remove('hidden');
-                        historyContent.classList.add('active');
-                    }
-
-                    // Render the returned demo data directly
-                    renderHistory(responseData.history);
-                } else {
-                    console.error('Failed to load demo data.');
-                }
-            } catch (e) {
-                console.error(e);
-                console.error('Error calling demo API');
-            }
-        });
-    });
-
-    // Close Demo Banner
-    const closeBannerBtn = document.getElementById('close-demo-banner');
-    if (closeBannerBtn) {
-        closeBannerBtn.addEventListener('click', () => {
-            document.getElementById('demo-disclaimer').classList.add('hidden');
-        });
-    }
 });
 
 async function fetchHistory() {
