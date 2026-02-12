@@ -28,8 +28,8 @@ npm run dev
 **Development Workflow:**
 1. Make changes locally
 2. Run `npm test` to verify no regressions
-3. Only commit if all tests pass
-4. Deploy with `deploy.bat`
+3. Commit changes (only if tests pass)
+4. Deploy with `deploy.bat` (automatically runs tests and aborts if any fail)
 
 Server runs on http://localhost:3000 (or PORT from .env).
 
