@@ -169,7 +169,7 @@ function renderHistory(history) {
             const d = new Date(dayObj.timestamp);
             dateStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         }
-        headerRow.innerHTML += `<th class="history-val">Day ${day}<div class="timestamp-small">${dateStr}</div></th>`;
+        headerRow.innerHTML += `<th class="history-val">Day ${day} <div class="timestamp-small">${dateStr}</div></th>`;
     });
     thead.appendChild(headerRow);
     table.appendChild(thead);
@@ -275,7 +275,6 @@ function createDayFilters(days, table) {
         // Gray out if no data
         const dayStr = String(day).trim();
         const hasData = daysWithData.includes(dayStr);
-        console.log(`Day ${day}: dayStr="${dayStr}", daysWithData=${JSON.stringify(daysWithData)}, hasData=${hasData}`);
 
         if (!hasData) {
             btn.classList.add('no-data');
@@ -312,11 +311,9 @@ function checkDaysWithData(table) {
         if (dayMatch) {
             const dayNum = String(dayMatch[1]).trim();
             daysWithData.push(dayNum);
-            console.log(`Found day ${dayNum} in table header`);
         }
     });
 
-    console.log('Days with data:', daysWithData);
     return daysWithData;
 }
 

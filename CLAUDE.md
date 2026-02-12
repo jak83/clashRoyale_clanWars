@@ -12,6 +12,12 @@ A web application that tracks Clash Royale clan war participation by displaying 
 # Install dependencies
 npm install
 
+# Run tests (ALWAYS run before committing!)
+npm test
+
+# Run tests in watch mode (during development)
+npm run test:watch
+
 # Run server (production mode)
 npm start
 
@@ -19,7 +25,27 @@ npm start
 npm run dev
 ```
 
+**Development Workflow:**
+1. Make changes locally
+2. Run `npm test` to verify no regressions
+3. Only commit if all tests pass
+4. Deploy with `deploy.bat`
+
 Server runs on http://localhost:3000 (or PORT from .env).
+
+## Testing
+
+Unit tests are in `tests/` folder using Jest framework. Tests verify:
+- War day calculation logic (Thu=Day1, Fri=Day2, Sat=Day3, Sun=Day4)
+- Training day detection
+- History snapshot management
+- Data parsing and type conversions
+
+**Always write tests for:**
+- Data parsing logic (string vs number comparisons)
+- Date/day calculations
+- History management functions
+- Any bug fixes (regression tests)
 
 ## Environment Setup
 
