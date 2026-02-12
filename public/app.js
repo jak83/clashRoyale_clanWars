@@ -198,7 +198,14 @@ function renderHistory(history) {
 
     playerArray.forEach(p => {
         const tr = document.createElement('tr');
-        let rowHtml = `<td><div class="player-name">${p.name}</div><div class="player-tag">${p.tag}</div></td>`;
+
+        // Check if player left (not in the most recent day)
+        const lastDay = days[days.length - 1];
+        const lastDayPlayers = history.days[lastDay].players || history.days[lastDay];
+        const hasLeft = !lastDayPlayers[p.tag];
+
+        const playerNameDisplay = hasLeft ? `${p.name} <span style="color: var(--text-secondary); font-size: 0.75rem;">(left)</span>` : p.name;
+        let rowHtml = `<td><div class="player-name">${playerNameDisplay}</div><div class="player-tag">${p.tag}</div></td>`;
 
         let isPerfectPlayer = true; // Assume perfect until proven otherwise
 
@@ -229,6 +236,11 @@ function renderHistory(history) {
         if (isPerfectPlayer) {
             tr.classList.add('history-row-completed');
             tr.classList.add('hidden-row'); // Hidden by default
+        }
+
+        if (hasLeft) {
+            tr.style.opacity = '0.6';
+            tr.title = 'Player left the clan';
         }
 
         tr.innerHTML = rowHtml;
