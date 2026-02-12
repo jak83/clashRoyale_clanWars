@@ -228,6 +228,7 @@ function renderHistory(history) {
 
         if (isPerfectPlayer) {
             tr.classList.add('history-row-completed');
+            tr.classList.add('hidden-row'); // Hidden by default
         }
 
         tr.innerHTML = rowHtml;
@@ -237,10 +238,12 @@ function renderHistory(history) {
     table.appendChild(tbody);
     container.appendChild(table);
 
-    // Re-apply hidden state if filter was active (e.g. after refresh)
+    // Initialize button state to hidden
     const toggleBtn = document.getElementById('toggle-history-completed');
-    if (toggleBtn && toggleBtn.dataset.hidden === 'true') {
-        table.querySelectorAll('.history-row-completed').forEach(row => row.classList.add('hidden-row'));
+    if (toggleBtn && !toggleBtn.dataset.hidden) {
+        toggleBtn.dataset.hidden = 'true';
+        toggleBtn.textContent = 'Show Completed';
+        toggleBtn.style.backgroundColor = '#666';
     }
 
     // Create day filter buttons - always show 1-4
