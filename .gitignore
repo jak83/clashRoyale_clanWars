@@ -1,3 +1,11 @@
 node_modules/
 .env
 .DS_Store
+
+# Data folders
+history/
+ongoing/
+*.json
+!package.json
+!package-lock.json
+!*.js

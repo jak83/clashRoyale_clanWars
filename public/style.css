@@ -39,8 +39,16 @@ h1 {
     font-weight: 700;
     background: linear-gradient(to right, #60a5fa, #a855f7);
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
     margin-bottom: 0.5rem;
+}
+
+.timestamp-small {
+    font-size: 0.65rem;
+    color: var(--text-secondary);
+    font-weight: 400;
+    margin-top: 2px;
 }
 
 .clan-title {
@@ -59,6 +67,31 @@ h1 {
     display: flex;
     gap: 1rem;
     margin-bottom: 2rem;
+}
+
+.war-status-container {
+    text-align: center;
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: rgba(59, 130, 246, 0.1);
+    border-radius: 12px;
+    border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.war-status-container h2 {
+    margin-bottom: 0.5rem;
+    border: none;
+    padding: 0;
+    font-size: 2rem;
+    background: linear-gradient(to right, #60a5fa, #a855f7);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.war-dates {
+    color: var(--text-secondary);
+    font-weight: 500;
 }
 
 .stat-box {
@@ -217,4 +250,167 @@ h2 {
 
 .summary-value.highlight-red {
     color: var(--accent-red);
+}
+
+/* Tabs */
+.tabs {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 1rem;
+}
+
+.tab-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    transition: all 0.2s;
+}
+
+.tab-btn:hover {
+    color: var(--text-primary);
+    background: var(--card-bg);
+}
+
+.tab-btn.active {
+    color: var(--text-primary);
+    background: var(--accent-blue);
+}
+
+/* History View */
+.history-controls {
+    margin-bottom: 1rem;
+    text-align: right;
+}
+
+.action-btn {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.action-btn:hover {
+    border-color: var(--accent-blue);
+}
+
+.history-table-container {
+    overflow-x: auto;
+    background: var(--card-bg);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    padding: 1rem;
+}
+
+.history-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 600px;
+}
+
+.history-table th,
+.history-table td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.history-table th {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.history-table tr:last-child td {
+    border-bottom: none;
+}
+
+.history-val {
+    font-weight: 700;
+    text-align: center;
+}
+
+.val-miss {
+    color: var(--accent-red);
+    opacity: 0.7;
+}
+
+.val-perfect {
+    color: var(--accent-green);
+}
+
+.val-partial {
+    color: var(--accent-blue);
+}
+
+/* Demo Banner */
+.demo-banner {
+    background-color: var(--accent-red);
+    color: white;
+    text-align: center;
+    padding: 0.5rem;
+    margin-bottom: 1rem;
+    border-radius: 8px;
+    font-weight: 600;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Demo Buttons Grid */
+.demo-buttons {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.btn-demo {
+    background: var(--accent-red);
+    color: white;
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    flex: 1;
+}
+
+.btn-demo:hover {
+    background: #ff4d4d;
+}
+
+/* Controls Row */
+.controls-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+/* Hide rows when toggled */
+.history-row-completed.hidden-row {
+    display: none;
 }
