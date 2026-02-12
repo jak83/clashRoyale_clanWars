@@ -527,6 +527,29 @@ h2 {
     display: none;
 }
 
+/* Sortable Table Headers */
+.sortable {
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.2s;
+}
+
+.sortable:hover {
+    background-color: rgba(59, 130, 246, 0.1);
+}
+
+.sort-header {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.sort-arrow {
+    font-size: 0.9rem;
+    color: var(--accent-blue);
+    min-width: 1rem;
+}
+
 /* Support Footer */
 .support-footer {
     text-align: center;

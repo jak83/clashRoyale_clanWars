@@ -100,8 +100,16 @@ function renderHistory(history) {
     // Header
     const thead = document.createElement('thead');
     const headerRow = document.createElement('tr');
-    headerRow.innerHTML = '<th>Player</th>';
 
+    // Player name header with sort
+    const playerHeader = document.createElement('th');
+    playerHeader.innerHTML = '<span class="sort-header">Player <span class="sort-arrow"></span></span>';
+    playerHeader.classList.add('sortable');
+    playerHeader.dataset.column = 'player';
+    playerHeader.dataset.sort = 'none';
+    headerRow.appendChild(playerHeader);
+
+    // Day headers with sort
     days.forEach(day => {
         const dayObj = history.days[day];
         let dateStr = '';
@@ -109,8 +117,16 @@ function renderHistory(history) {
             const d = new Date(dayObj.timestamp);
             dateStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         }
-        headerRow.innerHTML += `<th class="history-val">Day ${day} <div class="timestamp-small">${dateStr}</div></th>`;
+
+        const dayHeader = document.createElement('th');
+        dayHeader.className = 'history-val sortable';
+        dayHeader.innerHTML = `<span class="sort-header">Day ${day} <span class="sort-arrow"></span></span><div class="timestamp-small">${dateStr}</div>`;
+        dayHeader.dataset.column = `day${day}`;
+        dayHeader.dataset.sort = 'none';
+        dayHeader.dataset.dayIndex = days.indexOf(day);
+        headerRow.appendChild(dayHeader);
     });
+
     thead.appendChild(headerRow);
     table.appendChild(thead);
 
@@ -190,6 +206,9 @@ function renderHistory(history) {
     table.appendChild(tbody);
     container.appendChild(table);
 
+    // Add sorting functionality to headers
+    addTableSorting(table, history, days);
+
     // Initialize button state to hidden
     const toggleBtn = document.getElementById('toggle-history-completed');
     if (toggleBtn && !toggleBtn.dataset.hidden) {
@@ -200,6 +219,89 @@ function renderHistory(history) {
 
     // Create day filter buttons - always show 1-4
     createDayFilters(['1', '2', '3', '4'], table);
+}
+
+function addTableSorting(table, history, days) {
+    const headers = table.querySelectorAll('th.sortable');
+
+    headers.forEach(header => {
+        header.style.cursor = 'pointer';
+        header.addEventListener('click', () => {
+            const column = header.dataset.column;
+            const currentSort = header.dataset.sort;
+
+            // Reset all other headers
+            headers.forEach(h => {
+                if (h !== header) {
+                    h.dataset.sort = 'none';
+                    const arrow = h.querySelector('.sort-arrow');
+                    if (arrow) arrow.textContent = '';
+                }
+            });
+
+            // Toggle sort direction
+            let newSort = 'asc';
+            if (currentSort === 'none' || currentSort === 'desc') {
+                newSort = 'asc';
+            } else {
+                newSort = 'desc';
+            }
+
+            header.dataset.sort = newSort;
+            const arrow = header.querySelector('.sort-arrow');
+            if (arrow) {
+                arrow.textContent = newSort === 'asc' ? ' ↑' : ' ↓';
+            }
+
+            // Sort the table
+            sortTable(table, column, newSort, header.dataset.dayIndex, history, days);
+        });
+    });
+}
+
+function sortTable(table, column, direction, dayIndex, history, days) {
+    const tbody = table.querySelector('tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+
+    rows.sort((a, b) => {
+        let aValue, bValue;
+
+        if (column === 'player') {
+            // Sort by player name
+            aValue = a.querySelector('.player-name').textContent.trim().toLowerCase();
+            bValue = b.querySelector('.player-name').textContent.trim().toLowerCase();
+
+            // Remove "(left)" suffix for fair comparison
+            aValue = aValue.replace(' (left)', '');
+            bValue = bValue.replace(' (left)', '');
+
+            return direction === 'asc'
+                ? aValue.localeCompare(bValue)
+                : bValue.localeCompare(aValue);
+        } else if (column.startsWith('day')) {
+            // Sort by deck usage for specific day
+            const colIndex = parseInt(dayIndex) + 1; // +1 because player column is 0
+            const aCells = a.querySelectorAll('td');
+            const bCells = b.querySelectorAll('td');
+
+            if (aCells[colIndex] && bCells[colIndex]) {
+                // Extract number from "X / 4" format
+                const aText = aCells[colIndex].textContent.trim();
+                const bText = bCells[colIndex].textContent.trim();
+                aValue = parseInt(aText.split('/')[0].trim());
+                bValue = parseInt(bText.split('/')[0].trim());
+
+                return direction === 'asc'
+                    ? aValue - bValue
+                    : bValue - aValue;
+            }
+        }
+
+        return 0;
+    });
+
+    // Re-append sorted rows
+    rows.forEach(row => tbody.appendChild(row));
 }
 
 function createDayFilters(days, table) {
