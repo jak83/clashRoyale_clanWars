@@ -203,16 +203,155 @@ h2 {
 }
 
 .hidden {
-    display: none;
+    display: none !important;
 }
 
 @media (max-width: 600px) {
-    .summary-card {
-        flex-direction: column;
+    /* Reduce overall font sizes */
+    body {
+        font-size: 13px;
     }
 
+    h1 {
+        font-size: 1.3rem;
+        margin-bottom: 0.5rem;
+    }
+
+    h2 {
+        font-size: 1rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .container {
+        padding: 0.5rem;
+    }
+
+    /* Summary cards */
+    .summary-card {
+        flex-direction: column;
+        padding: 0.5rem;
+        gap: 0.5rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .stat-value {
+        font-size: 1.3rem;
+    }
+
+    .stat-label {
+        font-size: 0.7rem;
+    }
+
+    /* Player grid */
     .player-grid {
         grid-template-columns: 1fr;
+        gap: 0.5rem;
+    }
+
+    .player-card {
+        padding: 0.5rem;
+    }
+
+    .player-info {
+        gap: 0.25rem;
+    }
+
+    .player-name {
+        font-size: 0.85rem;
+        margin-bottom: 0;
+        line-height: 1.2;
+    }
+
+    .player-tag {
+        font-size: 0.65rem;
+        margin-top: 0.1rem;
+    }
+
+    .deck-progress {
+        font-size: 1.1rem;
+    }
+
+    .deck-label {
+        font-size: 0.65rem;
+    }
+
+    /* History table - force columns to show */
+    .history-table-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        margin: 0.5rem 0;
+    }
+
+    .history-table {
+        font-size: 0.6rem;
+        table-layout: fixed;
+        width: 100% !important;
+        min-width: unset !important; /* Override desktop 600px */
+    }
+
+    /* First column (player name) - super narrow */
+    .history-table th:first-child,
+    .history-table td:first-child {
+        width: 55px !important;
+        min-width: 55px;
+        max-width: 55px;
+        padding: 0.25rem 0.15rem;
+    }
+
+    /* Day columns - smaller to fit */
+    .history-table th:not(:first-child),
+    .history-table td:not(:first-child) {
+        width: 38px !important;
+        min-width: 38px;
+        padding: 0.25rem 0.15rem;
+        text-align: center;
+        font-size: 0.55rem;
+    }
+
+    .history-table .player-name {
+        font-size: 0.65rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 70px;
+    }
+
+    .history-table .player-tag {
+        display: none !important; /* Hide tag on mobile */
+    }
+
+    .timestamp-small {
+        font-size: 0.5rem;
+        display: block;
+        margin-top: 0.1rem;
+    }
+
+    /* Buttons */
+    .action-btn, .tab-btn {
+        font-size: 0.8rem;
+        padding: 0.4rem 0.6rem;
+    }
+
+    /* Tabs */
+    .tabs {
+        gap: 0.25rem;
+        margin-bottom: 0.75rem;
+    }
+
+    /* Demo controls */
+    .demo-buttons {
+        flex-wrap: wrap;
+        gap: 0.3rem !important;
+    }
+
+    .btn-demo {
+        font-size: 0.7rem;
+        padding: 0.3rem 0.5rem;
+    }
+
+    /* Sections */
+    section {
+        margin-bottom: 1rem;
     }
 }
 
@@ -379,6 +518,41 @@ h2 {
         opacity: 1;
         transform: translateY(0);
     }
+}
+
+/* Day Filter Buttons */
+.day-filters {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.day-filter-btn {
+    padding: 0.5rem 1rem;
+    background: var(--card-bg);
+    border: 2px solid var(--border-color);
+    color: var(--text-primary);
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.day-filter-btn:hover {
+    background: var(--border-color);
+}
+
+.day-filter-btn.active {
+    background: var(--accent-red);
+    border-color: var(--accent-red);
+    color: white;
+}
+
+.day-filter-btn.no-data {
+    opacity: 0.4;
+    cursor: not-allowed;
+    background: var(--card-bg);
+    color: var(--text-secondary);
 }
 
 /* Demo Buttons Grid */

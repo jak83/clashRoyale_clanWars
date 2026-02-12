@@ -247,6 +247,123 @@ function renderHistory(history) {
     if (toggleBtn && toggleBtn.dataset.hidden === 'true') {
         table.querySelectorAll('.history-row-completed').forEach(row => row.classList.add('hidden-row'));
     }
+
+    // Create day filter buttons - always show 1-4
+    createDayFilters(['1', '2', '3', '4'], table);
+}
+
+function createDayFilters(days, table) {
+    const filterContainer = document.getElementById('day-filter-buttons');
+    if (!filterContainer || days.length === 0) return;
+
+    filterContainer.innerHTML = '';
+    filterContainer.style.display = 'flex';
+
+    // Check which days have data
+    const daysWithData = checkDaysWithData(table);
+
+    // "All Days" button
+    const allBtn = document.createElement('button');
+    allBtn.className = 'day-filter-btn';
+    allBtn.textContent = 'All Days';
+    allBtn.dataset.day = 'all';
+    allBtn.addEventListener('click', () => filterByDay('all', table, allBtn));
+    filterContainer.appendChild(allBtn);
+
+    // Individual day buttons
+    days.forEach((day, index) => {
+        const btn = document.createElement('button');
+        btn.className = 'day-filter-btn';
+        btn.textContent = `Day ${day}`;
+        btn.dataset.day = day;
+
+        // Gray out if no data
+        const hasData = daysWithData.includes(String(day).trim());
+        if (!hasData) {
+            btn.classList.add('no-data');
+            btn.title = 'No data available for this day';
+        } else {
+            btn.addEventListener('click', () => filterByDay(day, table, btn));
+        }
+
+        filterContainer.appendChild(btn);
+    });
+
+    // Auto-select the highest day that has data
+    for (let i = daysWithData.length - 1; i >= 0; i--) {
+        const dayToSelect = daysWithData[i];
+        const btnToActivate = filterContainer.querySelector(`[data-day="${dayToSelect}"]`);
+        if (btnToActivate && !btnToActivate.classList.contains('no-data')) {
+            btnToActivate.classList.add('active');
+            filterByDay(dayToSelect, table, btnToActivate, true);
+            break;
+        }
+    }
+}
+
+function checkDaysWithData(table) {
+    const daysWithData = [];
+    const headerCells = table.querySelectorAll('thead th');
+
+    // If a day column exists, it has data (even if everyone has 0/4)
+    headerCells.forEach((th, index) => {
+        if (index === 0) return; // Skip player name column
+
+        const dayMatch = th.textContent.match(/Day (\d+)/);
+        if (dayMatch) {
+            daysWithData.push(String(dayMatch[1]).trim());
+        }
+    });
+
+    return daysWithData;
+}
+
+function filterByDay(selectedDay, table, activeBtn, silent = false) {
+    // Update active button
+    if (!silent) {
+        document.querySelectorAll('.day-filter-btn').forEach(btn => btn.classList.remove('active'));
+        activeBtn.classList.add('active');
+    }
+
+    // Get all column indices (0 = player name, 1+ = days)
+    const headerCells = table.querySelectorAll('thead th');
+    const dayColumns = [];
+
+    headerCells.forEach((th, index) => {
+        if (index === 0) return; // Skip player name column
+        const dayMatch = th.textContent.match(/Day (\d+)/);
+        if (dayMatch) {
+            dayColumns.push({ index, day: dayMatch[1] });
+        }
+    });
+
+    // Show/hide columns
+    if (selectedDay === 'all') {
+        // Show all columns
+        headerCells.forEach(th => th.style.display = '');
+        table.querySelectorAll('tbody td').forEach(td => td.style.display = '');
+    } else {
+        // Show only player name + selected day
+        headerCells.forEach((th, index) => {
+            if (index === 0) {
+                th.style.display = ''; // Always show player name
+            } else {
+                const dayMatch = th.textContent.match(/Day (\d+)/);
+                th.style.display = (dayMatch && dayMatch[1] === selectedDay.toString()) ? '' : 'none';
+            }
+        });
+
+        table.querySelectorAll('tbody tr').forEach(row => {
+            row.querySelectorAll('td').forEach((td, index) => {
+                if (index === 0) {
+                    td.style.display = ''; // Always show player name
+                } else {
+                    const correspondingDay = dayColumns[index - 1];
+                    td.style.display = (correspondingDay && correspondingDay.day === selectedDay.toString()) ? '' : 'none';
+                }
+            });
+        });
+    }
 }
 
 
@@ -383,7 +500,7 @@ function renderData(data) {
         warDayLabel.textContent = "Training";
     } else {
         warStatusEl.textContent = "War started!!";
-        warDayLabel.textContent = `Day ${data.periodIndex % 7 + 1} / 4`;
+        warDayLabel.textContent = `Day ${(data.periodIndex % 7) - 2} / 4`;
     }
 
     // 2. Date Range (Approximation from local time if not in API)
