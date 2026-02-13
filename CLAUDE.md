@@ -152,17 +152,23 @@ cp -r /tmp/history ~/clashApi/
 - Production: `~/clash-history-backups/` (Oracle Cloud server)
 - Local dev: `%USERPROFILE%\clash-history-backups\` (Windows)
 
-**View Backup Status:**
+**Verify Backup Automation:**
 ```bash
-# List backups
-ls -lh ~/clash-history-backups/
+# Run comprehensive status check
+./check_backup_status.sh
 
-# View backup logs
-tail -f ~/clash-backup.log
-
-# Check cron schedule
-crontab -l | grep backup
+# Or check individual components:
+crontab -l | grep backup          # View cron schedule
+ls -lh ~/clash-history-backups/   # List backups
+tail -f ~/clash-backup.log        # Watch backup log
 ```
+
+**Cron Job (Automatic Daily Backups):**
+- Runs daily at 2:00 AM regardless of deployments
+- Managed by Linux cron scheduler
+- View schedule: `crontab -l`
+- Disable: `crontab -e` (comment out the backup line with #)
+- Re-enable: Run `./setup_backup.sh` again
 
 ## Architecture
 
