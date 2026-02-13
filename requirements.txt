@@ -1,0 +1,9 @@
+# Robot Framework and dependencies for E2E testing
+robotframework==7.0
+
+# API integration tests
+robotframework-requests==0.9.7
+
+# Browser E2E tests with Selenium
+robotframework-seleniumlibrary==6.2.0
+webdriver-manager==4.0.2

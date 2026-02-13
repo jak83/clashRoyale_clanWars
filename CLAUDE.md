@@ -9,14 +9,25 @@ A web application that tracks Clash Royale clan war participation by displaying 
 ## Development Commands
 
 ```bash
-# Install dependencies
+# Install Node.js dependencies
 npm install
 
-# Run tests (ALWAYS run before committing!)
+# One-time Python setup (for Robot Framework e2e tests)
+python -m venv venv
+venv\Scripts\activate
+pip install -r requirements.txt
+
+# Run unit tests (ALWAYS run before committing!)
 npm test
 
-# Run tests in watch mode (during development)
+# Run unit tests in watch mode (during development)
 npm run test:watch
+
+# Run e2e tests (requires server to be running)
+npm run test:e2e
+
+# Run all tests (unit + e2e)
+npm run test:all
 
 # Run server (production mode)
 npm start
@@ -27,25 +38,69 @@ npm run dev
 
 **Development Workflow:**
 1. Make changes locally
-2. Run `npm test` to verify no regressions
-3. Commit changes (only if tests pass)
-4. Deploy with `deploy.bat` (automatically runs tests and aborts if any fail)
+2. Run `npm test` to verify unit tests pass
+3. Start server (`npm start`) and run `npm run test:e2e` for e2e verification
+4. Commit changes (only if tests pass)
+5. Deploy with `deploy.bat` (automatically starts server, runs ALL tests, and aborts if any fail)
 
 Server runs on http://localhost:3000 (or PORT from .env).
 
 ## Testing
 
-Unit tests are in `tests/` folder using Jest framework. Tests verify:
+The project uses a two-tier testing approach:
+
+### Unit Tests (Jest)
+Located in `tests/*.test.js`. Fast, isolated tests that verify:
 - War day calculation logic (Thu=Day1, Fri=Day2, Sat=Day3, Sun=Day4)
 - Training day detection
 - History snapshot management
 - Data parsing and type conversions
+- UI logic and sorting behavior
 
-**Always write tests for:**
+**Always write unit tests for:**
 - Data parsing logic (string vs number comparisons)
 - Date/day calculations
 - History management functions
 - Any bug fixes (regression tests)
+
+### E2E Tests (Robot Framework)
+Located in `tests/e2e/*.robot`. End-to-end tests that verify the full application:
+- Server startup and health checks
+- API endpoints return correct data structures
+- Background polling system
+- Demo mode functionality
+- Integration between frontend and backend
+
+**Robot Framework Setup:**
+```bash
+# One-time setup
+python -m venv venv
+venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+**Running E2E Tests Manually:**
+```bash
+# Terminal 1: Start server
+npm start
+
+# Terminal 2: Run Robot tests (activate venv first)
+venv\Scripts\activate
+robot --outputdir tests/e2e/results tests/e2e
+```
+
+After tests run, view `tests/e2e/results/report.html` for detailed results.
+
+**Deployment Testing:**
+`deploy.bat` automatically:
+1. Checks venv exists
+2. Starts local server in background
+3. Runs Jest unit tests
+4. Runs Robot Framework e2e tests
+5. Only deploys to production if ALL tests pass
+6. Cleans up server process
+
+This ensures you never deploy broken code to production.
 
 ## Environment Setup
 
