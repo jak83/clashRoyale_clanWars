@@ -671,9 +671,13 @@ function createPodium(history, days) {
         let totalPoints = 0;
         let totalDecks = 0;
 
-        days.forEach((day, index) => {
+        days.forEach((day) => {
+            const dayNum = parseInt(day);
             const dayObj = history.days[day];
-            const prevDayObj = index > 0 ? history.days[days[index - 1]] : null;
+
+            // IMPORTANT: Look at ACTUAL previous day in history, not just previous in filtered array
+            const prevDay = String(dayNum - 1);
+            const prevDayObj = dayNum > 1 ? history.days[prevDay] : null;
 
             const participants = dayObj.players || dayObj;
             const prevParticipants = prevDayObj ? (prevDayObj.players || prevDayObj) : {};
@@ -681,13 +685,13 @@ function createPodium(history, days) {
             if (participants[tag]) {
                 name = participants[tag].name;
 
-                // Calculate DAILY points (current - previous)
+                // Calculate DAILY points (current - previous day in history)
                 const currentPoints = participants[tag].fame || 0;
                 const prevPoints = prevParticipants[tag] ? (prevParticipants[tag].fame || 0) : 0;
                 const dailyPoints = Math.max(0, currentPoints - prevPoints);
                 totalPoints += dailyPoints;
 
-                // Calculate DAILY decks (current - previous)
+                // Calculate DAILY decks (current - previous day in history)
                 const currentDecks = participants[tag].decksUsed || 0;
                 const prevDecks = prevParticipants[tag] ? (prevParticipants[tag].decksUsed || 0) : 0;
                 const dailyDecks = Math.max(0, currentDecks - prevDecks);
