@@ -1006,7 +1006,8 @@ function filterByDay(selectedDay, table, activeBtn, silent = false) {
         if (selectedDay === 'all') {
             // Show total across all days (only count visible rows)
             table.querySelectorAll('tbody tr').forEach(row => {
-                if (row.style.display === 'none') return; // Skip hidden rows
+                // Skip rows hidden by inline style OR by CSS class
+                if (row.style.display === 'none' || row.classList.contains('hidden-row')) return;
                 visiblePlayerCount++;
                 totalDecksForFilter += parseInt(row.dataset.totalDecks) || 0;
             });
@@ -1018,7 +1019,8 @@ function filterByDay(selectedDay, table, activeBtn, silent = false) {
         } else {
             // Show only selected day's decks (only count visible rows)
             table.querySelectorAll('tbody tr').forEach(row => {
-                if (row.style.display === 'none') return; // Skip hidden rows
+                // Skip rows hidden by inline style OR by CSS class
+                if (row.style.display === 'none' || row.classList.contains('hidden-row')) return;
                 visiblePlayerCount++;
                 const dailyDecksData = row.dataset.dailyDecks;
                 if (dailyDecksData) {
