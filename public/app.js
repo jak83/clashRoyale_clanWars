@@ -342,8 +342,9 @@ function renderHistory(history, currentMemberTags = []) {
 
     const table = document.createElement('table');
     table.className = 'history-table';
-    // Store member tags on table for filtering
+    // Store member tags and history on table for filtering
     table.dataset.currentMembers = JSON.stringify(currentMemberTags);
+    table.dataset.history = JSON.stringify(history);
 
     // Header
     const thead = document.createElement('thead');
@@ -528,11 +529,100 @@ function renderHistory(history, currentMemberTags = []) {
     // Insert deck counter before the table
     container.insertBefore(deckCounter, table);
 
+    // Create podium showing top 3 by points
+    const podium = createPodium(history, days);
+    container.appendChild(podium);
+
     // Create day filter buttons - always show 1-4
     createDayFilters(['1', '2', '3', '4'], table);
 
     // Update player count after rendering
     updatePlayerCount();
+}
+
+function updatePodium(history, days) {
+    const existingPodium = document.getElementById('history-podium');
+    if (existingPodium) {
+        const newPodium = createPodium(history, days);
+        existingPodium.replaceWith(newPodium);
+    }
+}
+
+function createPodium(history, days) {
+    const podiumContainer = document.createElement('div');
+    podiumContainer.id = 'history-podium';
+    podiumContainer.style.cssText = 'display: flex; justify-content: center; gap: 1.5rem; margin: 2rem 0; flex-wrap: wrap;';
+
+    // Calculate top 3 players by total points
+    const playerStats = {};
+
+    // Collect all unique players
+    const allTags = new Set();
+    days.forEach(day => {
+        const dayObj = history.days[day];
+        const participants = dayObj.players || dayObj;
+        Object.keys(participants).forEach(tag => allTags.add(tag));
+    });
+
+    // Calculate stats for each player
+    allTags.forEach(tag => {
+        let name = tag;
+        let totalPoints = 0;
+        let totalDecks = 0;
+
+        days.forEach(day => {
+            const dayObj = history.days[day];
+            const participants = dayObj.players || dayObj;
+            if (participants[tag]) {
+                name = participants[tag].name;
+                totalPoints = participants[tag].fame || 0; // Use latest cumulative
+                totalDecks = participants[tag].decksUsed || 0;
+            }
+        });
+
+        playerStats[tag] = { name, totalPoints, totalDecks };
+    });
+
+    // Sort by points and get top 3
+    const top3 = Object.values(playerStats)
+        .filter(p => p.totalPoints > 0) // Only include players with points
+        .sort((a, b) => b.totalPoints - a.totalPoints)
+        .slice(0, 3);
+
+    if (top3.length === 0) {
+        podiumContainer.innerHTML = '<div style="text-align: center; color: var(--text-secondary);">No data yet</div>';
+        return podiumContainer;
+    }
+
+    // Create podium cards
+    const medals = ['🥇', '🥈', '🥉'];
+    const positions = ['1st', '2nd', '3rd'];
+    const colors = ['var(--accent-green)', '#C0C0C0', '#CD7F32'];
+
+    top3.forEach((player, index) => {
+        const card = document.createElement('div');
+        card.style.cssText = `
+            background: var(--card-bg);
+            border: 3px solid ${colors[index]};
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+            min-width: 180px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        `;
+
+        card.innerHTML = `
+            <div style="font-size: 3rem; margin-bottom: 0.5rem;">${medals[index]}</div>
+            <div style="font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.1em;">${positions[index]} Place</div>
+            <div style="font-weight: 700; font-size: 1.2rem; margin: 0.5rem 0; color: var(--text-primary);">${player.name}</div>
+            <div style="color: ${colors[index]}; font-size: 1.5rem; font-weight: 700; margin: 0.5rem 0;">${player.totalPoints.toLocaleString()} pts</div>
+            <div style="color: var(--text-secondary); font-size: 0.9rem;">${player.totalDecks} / ${days.length * 4} decks</div>
+        `;
+
+        podiumContainer.appendChild(card);
+    });
+
+    return podiumContainer;
 }
 
 function addTableSorting(table, history, days) {
@@ -701,6 +791,15 @@ function filterByDay(selectedDay, table, activeBtn, silent = false) {
     if (!silent) {
         document.querySelectorAll('.day-filter-btn').forEach(btn => btn.classList.remove('active'));
         activeBtn.classList.add('active');
+    }
+
+    // Update podium based on filtered days
+    const history = table.dataset.history ? JSON.parse(table.dataset.history) : null;
+    if (history) {
+        const filteredDays = selectedDay === 'all'
+            ? Object.keys(history.days).sort()
+            : [String(selectedDay)];
+        updatePodium(history, filteredDays);
     }
 
     // Check if selected day has data
