@@ -1003,12 +1003,12 @@ function filterByDay(selectedDay, table, activeBtn, silent = false) {
         let visiblePlayerCount = 0;
         let daysCount = 1;
 
+        // Count ALL players (rows in table), regardless of visibility filters
+        const totalPlayers = table.querySelectorAll('tbody tr').length;
+
         if (selectedDay === 'all') {
-            // Show total across all days (only count visible rows)
+            // Show total across all days
             table.querySelectorAll('tbody tr').forEach(row => {
-                // Skip rows hidden by inline style OR by CSS class
-                if (row.style.display === 'none' || row.classList.contains('hidden-row')) return;
-                visiblePlayerCount++;
                 totalDecksForFilter += parseInt(row.dataset.totalDecks) || 0;
             });
             // Count number of day columns
@@ -1017,11 +1017,8 @@ function filterByDay(selectedDay, table, activeBtn, silent = false) {
             );
             daysCount = dayCols.length;
         } else {
-            // Show only selected day's decks (only count visible rows)
+            // Show only selected day's decks
             table.querySelectorAll('tbody tr').forEach(row => {
-                // Skip rows hidden by inline style OR by CSS class
-                if (row.style.display === 'none' || row.classList.contains('hidden-row')) return;
-                visiblePlayerCount++;
                 const dailyDecksData = row.dataset.dailyDecks;
                 if (dailyDecksData) {
                     try {
@@ -1035,7 +1032,7 @@ function filterByDay(selectedDay, table, activeBtn, silent = false) {
             daysCount = 1;
         }
 
-        const maxDecks = visiblePlayerCount * 4 * daysCount;
+        const maxDecks = totalPlayers * 4 * daysCount;
         const percentage = maxDecks > 0 ? ((totalDecksForFilter / maxDecks) * 100).toFixed(1) : 0;
         deckCounter.innerHTML = `<span style="color: var(--accent-green);">${totalDecksForFilter}</span> / ${maxDecks} decks played (${percentage}%)`;
     }
