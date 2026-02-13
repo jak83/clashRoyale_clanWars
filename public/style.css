@@ -446,7 +446,8 @@ h2 {
 .history-table {
     width: 100%;
     border-collapse: collapse;
-    min-width: 600px;
+    min-width: 580px; /* Player(100) + Days(4x70) + Points(80) = 460px + padding */
+    table-layout: fixed; /* Force column widths */
 }
 
 .history-table th,
@@ -456,27 +457,35 @@ h2 {
     border-bottom: 1px solid var(--border-color);
 }
 
-/* Column widths for desktop */
-.history-table th:first-child,
-.history-table td:first-child {
-    width: 120px;
-    max-width: 120px;
+/* Column widths for desktop - using specific classes for clarity */
+.history-table th:nth-child(1),
+.history-table td:nth-child(1) {
+    width: 100px;
+    min-width: 100px;
+    max-width: 100px;
 }
 
-/* Day columns */
-.history-table th:not(:first-child):not(:last-child),
-.history-table td:not(:first-child):not(:last-child) {
+/* Day columns (columns 2-5) */
+.history-table th:nth-child(2),
+.history-table th:nth-child(3),
+.history-table th:nth-child(4),
+.history-table th:nth-child(5),
+.history-table td:nth-child(2),
+.history-table td:nth-child(3),
+.history-table td:nth-child(4),
+.history-table td:nth-child(5) {
+    width: 70px;
+    min-width: 70px;
+    text-align: center;
+}
+
+/* Points column (6th column - last) */
+.history-table th:nth-child(6),
+.history-table td:nth-child(6) {
     width: 80px;
     min-width: 80px;
     text-align: center;
-}
-
-/* Points column (last) */
-.history-table th:last-child,
-.history-table td:last-child {
-    width: 90px;
-    min-width: 90px;
-    text-align: center;
+    font-weight: 600;
 }
 
 .history-table th {
