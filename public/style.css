@@ -467,23 +467,17 @@ h2 {
     max-width: 100px;
 }
 
-/* Day columns (columns 2-5) */
-.history-table th:nth-child(2),
-.history-table th:nth-child(3),
-.history-table th:nth-child(4),
-.history-table th:nth-child(5),
-.history-table td:nth-child(2),
-.history-table td:nth-child(3),
-.history-table td:nth-child(4),
-.history-table td:nth-child(5) {
+/* Day columns (everything except first and last) */
+.history-table th:not(:first-child):not(:last-child),
+.history-table td:not(:first-child):not(:last-child) {
     width: 70px;
     min-width: 70px;
     text-align: center;
 }
 
-/* Points column (6th column - last) - VERY VISIBLE */
-.history-table th:nth-child(6),
-.history-table td:nth-child(6) {
+/* Points column (ALWAYS LAST COLUMN) - VERY VISIBLE */
+.history-table th:last-child,
+.history-table td:last-child {
     width: 100px !important;
     min-width: 100px !important;
     max-width: 100px !important;
