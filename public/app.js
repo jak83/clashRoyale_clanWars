@@ -431,7 +431,7 @@ function renderHistory(history, currentMemberTags = []) {
     // Total Points header with sort (rightmost column)
     const pointsHeader = document.createElement('th');
     pointsHeader.innerHTML = '<span class="sort-header">Points <span class="sort-arrow"></span></span>';
-    pointsHeader.classList.add('sortable', 'history-val');
+    pointsHeader.classList.add('sortable', 'history-val', 'points-header');
     pointsHeader.dataset.column = 'points';
     pointsHeader.dataset.sort = 'none';
     pointsHeader.title = 'Total points earned';
@@ -482,6 +482,7 @@ function renderHistory(history, currentMemberTags = []) {
         let isPerfectPlayer = true; // Assume perfect until proven otherwise
         let totalDecksForPlayer = 0; // Track total decks for this player
         let totalPointsForPlayer = 0; // Track total points for this player
+        const dailyPointsMap = {}; // Track points per day
 
         days.forEach((day, index) => {
             const currentDayObj = history.days[day];
@@ -502,16 +503,20 @@ function renderHistory(history, currentMemberTags = []) {
 
             totalDecksForPlayer += dailyDecks;
 
-            // Get points from current day's data (cumulative total from API)
-            if (currP && currP.fame !== undefined) {
-                totalPointsForPlayer = currP.fame;
-            }
+            // Calculate daily points (difference from previous day)
+            let fameTotal = currP ? (currP.fame || 0) : 0;
+            let famePrev = prevP ? (prevP.fame || 0) : 0;
+            let dailyPoints = fameTotal - famePrev;
+            if (dailyPoints < 0) dailyPoints = 0;
+
+            dailyPointsMap[day] = dailyPoints;
+            totalPointsForPlayer = fameTotal; // Keep cumulative total
 
             // Color Logic
             let valClass = 'val-miss';
             if (dailyDecks >= 4) valClass = 'val-perfect';
 
-            rowHtml += `<td class="history-val ${valClass}">${dailyDecks} / 4</td>`;
+            rowHtml += `<td class="history-val ${valClass}" data-day="${day}">${dailyDecks} / 4</td>`;
         });
 
         // Add points column as rightmost column
@@ -524,6 +529,7 @@ function renderHistory(history, currentMemberTags = []) {
         // Store total decks and points on row for filtering/sorting
         tr.dataset.totalDecks = totalDecksForPlayer;
         tr.dataset.totalPoints = totalPointsForPlayer;
+        tr.dataset.dailyPoints = JSON.stringify(dailyPointsMap); // Store daily points for filtering
 
         if (isPerfectPlayer) {
             tr.classList.add('history-row-completed');
@@ -896,10 +902,12 @@ function filterByDay(selectedDay, table, activeBtn, silent = false) {
         headerCells.forEach(th => th.style.display = '');
         table.querySelectorAll('tbody td').forEach(td => td.style.display = '');
     } else {
-        // Show only player name + selected day
+        // Show only player name + selected day + points
         headerCells.forEach((th, index) => {
             if (index === 0) {
                 th.style.display = ''; // Always show player name
+            } else if (th.classList.contains('points-header') || th.textContent.includes('Points')) {
+                th.style.display = ''; // Always show points column
             } else {
                 const dayMatch = th.textContent.match(/Day (\d+)/);
                 th.style.display = (dayMatch && dayMatch[1] === selectedDay.toString()) ? '' : 'none';
@@ -910,6 +918,8 @@ function filterByDay(selectedDay, table, activeBtn, silent = false) {
             row.querySelectorAll('td').forEach((td, index) => {
                 if (index === 0) {
                     td.style.display = ''; // Always show player name
+                } else if (td.classList.contains('points-cell')) {
+                    td.style.display = ''; // Always show points column
                 } else {
                     const correspondingDay = dayColumns[index - 1];
                     td.style.display = (correspondingDay && correspondingDay.day === selectedDay.toString()) ? '' : 'none';
@@ -917,6 +927,34 @@ function filterByDay(selectedDay, table, activeBtn, silent = false) {
             });
         });
     }
+
+    // Update points column based on filtered days
+    table.querySelectorAll('tbody tr').forEach(row => {
+        const pointsCell = row.querySelector('.points-cell');
+        if (!pointsCell) return;
+
+        const dailyPointsData = row.dataset.dailyPoints;
+        const totalPoints = row.dataset.totalPoints;
+
+        if (!dailyPointsData) return;
+
+        try {
+            const dailyPointsMap = JSON.parse(dailyPointsData);
+            let displayPoints = 0;
+
+            if (selectedDay === 'all') {
+                // Show cumulative total
+                displayPoints = parseInt(totalPoints) || 0;
+            } else {
+                // Show only selected day's points
+                displayPoints = dailyPointsMap[selectedDay] || 0;
+            }
+
+            pointsCell.textContent = displayPoints > 0 ? displayPoints.toLocaleString() : '-';
+        } catch (e) {
+            console.error('Error parsing daily points:', e);
+        }
+    });
 
     // Update player count after filtering
     updatePlayerCount();
