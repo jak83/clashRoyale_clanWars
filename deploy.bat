@@ -59,7 +59,7 @@ if errorlevel 1 (
 echo.
 
 echo [3/6] Running E2E tests with Robot Framework...
-call venv\Scripts\activate.bat && robot --outputdir tests/e2e/results tests/e2e
+call venv\Scripts\activate.bat && robot --outputdir tests/e2e/results tests/e2e/integration_tests.robot tests/e2e/browser_tests.robot tests/e2e/day_filter_bug.robot
 if errorlevel 1 (
     echo.
     echo ========================================
