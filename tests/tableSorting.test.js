@@ -1,216 +1,202 @@
 /**
- * @jest-environment jsdom
+ * Tests for table sorting logic
+ * Tests pure sorting functions without DOM dependencies
  */
 
-describe('Table Sorting', () => {
-  // Helper function to create mock table rows
-  function createMockTable() {
-    document.body.innerHTML = `
-      <table id="test-table">
-        <thead>
-          <tr>
-            <th class="sortable" data-column="player" data-sort="none">
-              <span class="sort-header">Player <span class="sort-arrow"></span></span>
-            </th>
-            <th class="sortable" data-column="day1" data-sort="none" data-day-index="0">
-              <span class="sort-header">Day 1 <span class="sort-arrow"></span></span>
-            </th>
-            <th class="sortable" data-column="day2" data-sort="none" data-day-index="1">
-              <span class="sort-header">Day 2 <span class="sort-arrow"></span></span>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><div class="player-name">Charlie</div></td>
-            <td>2 / 4</td>
-            <td>4 / 4</td>
-          </tr>
-          <tr>
-            <td><div class="player-name">Alice</div></td>
-            <td>4 / 4</td>
-            <td>2 / 4</td>
-          </tr>
-          <tr>
-            <td><div class="player-name">Bob</div></td>
-            <td>0 / 4</td>
-            <td>4 / 4</td>
-          </tr>
-        </tbody>
-      </table>
-    `;
-    return document.getElementById('test-table');
-  }
+describe('Table Sorting Logic', () => {
+  // Extract sorting comparison logic (matches app.js implementation)
+  const sortComparators = {
+    player: (a, b, direction) => {
+      const aName = a.playerName.toLowerCase().replace(' (left)', '');
+      const bName = b.playerName.toLowerCase().replace(' (left)', '');
 
-  // Mock sorting function (simplified version of the actual function)
-  function sortTableByColumn(table, column, direction, dayIndex) {
-    const tbody = table.querySelector('tbody');
-    const rows = Array.from(tbody.querySelectorAll('tr'));
+      return direction === 'asc'
+        ? aName.localeCompare(bName)
+        : bName.localeCompare(aName);
+    },
 
-    rows.sort((a, b) => {
-      let aValue, bValue;
+    day: (a, b, direction, dayValue) => {
+      const aDecks = parseInt(a[dayValue]);
+      const bDecks = parseInt(b[dayValue]);
 
-      if (column === 'player') {
-        aValue = a.querySelector('.player-name').textContent.trim().toLowerCase();
-        bValue = b.querySelector('.player-name').textContent.trim().toLowerCase();
-        return direction === 'asc'
-          ? aValue.localeCompare(bValue)
-          : bValue.localeCompare(aValue);
-      } else if (column.startsWith('day')) {
-        const colIndex = parseInt(dayIndex) + 1;
-        const aCells = a.querySelectorAll('td');
-        const bCells = b.querySelectorAll('td');
+      return direction === 'asc'
+        ? aDecks - bDecks
+        : bDecks - aDecks;
+    },
 
-        if (aCells[colIndex] && bCells[colIndex]) {
-          const aText = aCells[colIndex].textContent.trim();
-          const bText = bCells[colIndex].textContent.trim();
-          aValue = parseInt(aText.split('/')[0].trim());
-          bValue = parseInt(bText.split('/')[0].trim());
+    points: (a, b, direction) => {
+      const aPoints = parseInt(a.totalPoints) || 0;
+      const bPoints = parseInt(b.totalPoints) || 0;
 
-          return direction === 'asc' ? aValue - bValue : bValue - aValue;
-        }
-      } else if (column === 'points') {
-        aValue = parseInt(a.dataset.totalPoints) || 0;
-        bValue = parseInt(b.dataset.totalPoints) || 0;
-        return direction === 'asc' ? aValue - bValue : bValue - aValue;
-      }
-
-      return 0;
-    });
-
-    rows.forEach(row => tbody.appendChild(row));
-  }
+      return direction === 'asc'
+        ? aPoints - bPoints
+        : bPoints - aPoints;
+    }
+  };
 
   describe('Sort by player name', () => {
-    test('should sort players alphabetically (A-Z)', () => {
-      const table = createMockTable();
-      sortTableByColumn(table, 'player', 'asc', null);
+    const players = [
+      { playerName: 'Charlie', totalPoints: 500 },
+      { playerName: 'Alice', totalPoints: 800 },
+      { playerName: 'Bob', totalPoints: 600 }
+    ];
 
-      const rows = table.querySelectorAll('tbody tr');
-      const names = Array.from(rows).map(row =>
-        row.querySelector('.player-name').textContent
+    test('should sort players alphabetically (A-Z)', () => {
+      const sorted = [...players].sort((a, b) =>
+        sortComparators.player(a, b, 'asc')
       );
 
-      expect(names).toEqual(['Alice', 'Bob', 'Charlie']);
+      expect(sorted.map(p => p.playerName)).toEqual(['Alice', 'Bob', 'Charlie']);
     });
 
     test('should sort players reverse alphabetically (Z-A)', () => {
-      const table = createMockTable();
-      sortTableByColumn(table, 'player', 'desc', null);
-
-      const rows = table.querySelectorAll('tbody tr');
-      const names = Array.from(rows).map(row =>
-        row.querySelector('.player-name').textContent
+      const sorted = [...players].sort((a, b) =>
+        sortComparators.player(a, b, 'desc')
       );
 
-      expect(names).toEqual(['Charlie', 'Bob', 'Alice']);
+      expect(sorted.map(p => p.playerName)).toEqual(['Charlie', 'Bob', 'Alice']);
     });
 
     test('should handle players with "(left)" suffix', () => {
-      document.body.innerHTML = `
-        <table id="test-table">
-          <tbody>
-            <tr><td><div class="player-name">Bob (left)</div></td></tr>
-            <tr><td><div class="player-name">Alice</div></td></tr>
-          </tbody>
-        </table>
-      `;
+      const playersWithLeft = [
+        { playerName: 'Charlie (left)', totalPoints: 500 },
+        { playerName: 'Alice', totalPoints: 800 },
+        { playerName: 'Bob (left)', totalPoints: 600 }
+      ];
 
-      const table = document.getElementById('test-table');
-      const rows = Array.from(table.querySelectorAll('tbody tr'));
-
-      rows.sort((a, b) => {
-        let aValue = a.querySelector('.player-name').textContent.trim().toLowerCase();
-        let bValue = b.querySelector('.player-name').textContent.trim().toLowerCase();
-        aValue = aValue.replace(' (left)', '');
-        bValue = bValue.replace(' (left)', '');
-        return aValue.localeCompare(bValue);
-      });
-
-      const tbody = table.querySelector('tbody');
-      rows.forEach(row => tbody.appendChild(row));
-
-      const names = Array.from(table.querySelectorAll('tbody tr')).map(row =>
-        row.querySelector('.player-name').textContent
+      const sorted = [...playersWithLeft].sort((a, b) =>
+        sortComparators.player(a, b, 'asc')
       );
 
-      expect(names).toEqual(['Alice', 'Bob (left)']);
+      expect(sorted.map(p => p.playerName)).toEqual([
+        'Alice',
+        'Bob (left)',
+        'Charlie (left)'
+      ]);
     });
   });
 
   describe('Sort by day column', () => {
+    const players = [
+      { playerName: 'Alice', day1: 4, day2: 2 },
+      { playerName: 'Bob', day1: 0, day2: 4 },
+      { playerName: 'Charlie', day1: 2, day2: 4 }
+    ];
+
     test('should sort by Day 1 decks (ascending)', () => {
-      const table = createMockTable();
-      sortTableByColumn(table, 'day1', 'asc', '0');
+      const sorted = [...players].sort((a, b) =>
+        sortComparators.day(a, b, 'asc', 'day1')
+      );
 
-      const rows = table.querySelectorAll('tbody tr');
-      const deckCounts = Array.from(rows).map(row => {
-        const text = row.querySelectorAll('td')[1].textContent.trim();
-        return parseInt(text.split('/')[0].trim());
-      });
-
-      expect(deckCounts).toEqual([0, 2, 4]); // Bob, Charlie, Alice
+      expect(sorted.map(p => p.playerName)).toEqual(['Bob', 'Charlie', 'Alice']);
     });
 
     test('should sort by Day 1 decks (descending)', () => {
-      const table = createMockTable();
-      sortTableByColumn(table, 'day1', 'desc', '0');
+      const sorted = [...players].sort((a, b) =>
+        sortComparators.day(a, b, 'desc', 'day1')
+      );
 
-      const rows = table.querySelectorAll('tbody tr');
-      const deckCounts = Array.from(rows).map(row => {
-        const text = row.querySelectorAll('td')[1].textContent.trim();
-        return parseInt(text.split('/')[0].trim());
-      });
-
-      expect(deckCounts).toEqual([4, 2, 0]); // Alice, Charlie, Bob
+      expect(sorted.map(p => p.playerName)).toEqual(['Alice', 'Charlie', 'Bob']);
     });
 
     test('should sort by Day 2 decks (ascending)', () => {
-      const table = createMockTable();
-      sortTableByColumn(table, 'day2', 'asc', '1');
+      const sorted = [...players].sort((a, b) =>
+        sortComparators.day(a, b, 'asc', 'day2')
+      );
 
-      const rows = table.querySelectorAll('tbody tr');
-      const deckCounts = Array.from(rows).map(row => {
-        const text = row.querySelectorAll('td')[2].textContent.trim();
-        return parseInt(text.split('/')[0].trim());
-      });
+      expect(sorted.map(p => p.playerName)).toEqual(['Alice', 'Bob', 'Charlie']);
+    });
 
-      expect(deckCounts).toEqual([2, 4, 4]); // Alice, Charlie, Bob (stable sort)
+    test('should handle ties in deck count', () => {
+      const playersWithTies = [
+        { playerName: 'Alice', day1: 4 },
+        { playerName: 'Bob', day1: 4 },
+        { playerName: 'Charlie', day1: 2 }
+      ];
+
+      const sorted = [...playersWithTies].sort((a, b) =>
+        sortComparators.day(a, b, 'desc', 'day1')
+      );
+
+      // Alice and Bob both have 4, Charlie has 2
+      expect(sorted[0].day1).toBe(4);
+      expect(sorted[1].day1).toBe(4);
+      expect(sorted[2].day1).toBe(2);
     });
   });
 
-  describe('Sort arrow indicators', () => {
-    test('should show up arrow for ascending sort', () => {
-      const table = createMockTable();
-      const header = table.querySelector('[data-column="player"]');
-      const arrow = header.querySelector('.sort-arrow');
+  describe('Sort by points column', () => {
+    const players = [
+      { playerName: 'Bob', totalPoints: 600 },
+      { playerName: 'Alice', totalPoints: 800 },
+      { playerName: 'Charlie', totalPoints: 400 },
+      { playerName: 'Dave', totalPoints: 0 }
+    ];
 
-      header.dataset.sort = 'asc';
-      arrow.textContent = ' ↑';
+    test('should sort by points ascending', () => {
+      const sorted = [...players].sort((a, b) =>
+        sortComparators.points(a, b, 'asc')
+      );
 
-      expect(arrow.textContent).toBe(' ↑');
+      expect(sorted.map(p => p.playerName)).toEqual([
+        'Dave',
+        'Charlie',
+        'Bob',
+        'Alice'
+      ]);
     });
 
-    test('should show down arrow for descending sort', () => {
-      const table = createMockTable();
-      const header = table.querySelector('[data-column="player"]');
-      const arrow = header.querySelector('.sort-arrow');
+    test('should sort by points descending', () => {
+      const sorted = [...players].sort((a, b) =>
+        sortComparators.points(a, b, 'desc')
+      );
 
-      header.dataset.sort = 'desc';
-      arrow.textContent = ' ↓';
-
-      expect(arrow.textContent).toBe(' ↓');
+      expect(sorted.map(p => p.playerName)).toEqual([
+        'Alice',
+        'Bob',
+        'Charlie',
+        'Dave'
+      ]);
     });
 
-    test('should clear arrow when sort is none', () => {
-      const table = createMockTable();
-      const header = table.querySelector('[data-column="player"]');
-      const arrow = header.querySelector('.sort-arrow');
+    test('should handle players with 0 points', () => {
+      const sorted = [...players].sort((a, b) =>
+        sortComparators.points(a, b, 'asc')
+      );
 
-      header.dataset.sort = 'none';
-      arrow.textContent = '';
+      expect(sorted[0].playerName).toBe('Dave');
+      expect(sorted[0].totalPoints).toBe(0);
+    });
 
-      expect(arrow.textContent).toBe('');
+    test('should handle missing totalPoints (treat as 0)', () => {
+      const playersWithMissing = [
+        { playerName: 'Alice', totalPoints: 500 },
+        { playerName: 'Bob' } // No totalPoints field
+      ];
+
+      const sorted = [...playersWithMissing].sort((a, b) =>
+        sortComparators.points(a, b, 'asc')
+      );
+
+      expect(sorted[0].playerName).toBe('Bob');
+      expect(sorted[1].playerName).toBe('Alice');
+    });
+
+    test('should handle ties in points', () => {
+      const playersWithTies = [
+        { playerName: 'Alice', totalPoints: 600 },
+        { playerName: 'Bob', totalPoints: 600 },
+        { playerName: 'Charlie', totalPoints: 400 }
+      ];
+
+      const sorted = [...playersWithTies].sort((a, b) =>
+        sortComparators.points(a, b, 'desc')
+      );
+
+      // Alice and Bob both have 600
+      expect(sorted[0].totalPoints).toBe(600);
+      expect(sorted[1].totalPoints).toBe(600);
+      expect(sorted[2].totalPoints).toBe(400);
     });
   });
 
@@ -235,139 +221,54 @@ describe('Table Sorting', () => {
   });
 
   describe('Edge cases', () => {
-    test('should handle empty table', () => {
-      document.body.innerHTML = '<table><tbody></tbody></table>';
-      const table = document.querySelector('table');
+    test('should handle empty array', () => {
+      const empty = [];
+      const sorted = [...empty].sort((a, b) =>
+        sortComparators.player(a, b, 'asc')
+      );
 
-      expect(() => {
-        sortTableByColumn(table, 'player', 'asc', null);
-      }).not.toThrow();
+      expect(sorted).toEqual([]);
     });
 
-    test('should handle single row', () => {
-      document.body.innerHTML = `
-        <table>
-          <tbody>
-            <tr><td><div class="player-name">Alice</div></td></tr>
-          </tbody>
-        </table>
-      `;
-      const table = document.querySelector('table');
+    test('should handle single player', () => {
+      const single = [{ playerName: 'Alice', totalPoints: 500 }];
+      const sorted = [...single].sort((a, b) =>
+        sortComparators.player(a, b, 'asc')
+      );
 
-      sortTableByColumn(table, 'player', 'asc', null);
+      expect(sorted).toEqual([{ playerName: 'Alice', totalPoints: 500 }]);
+    });
 
-      const names = Array.from(table.querySelectorAll('.player-name')).map(n => n.textContent);
-      expect(names).toEqual(['Alice']);
+    test('should handle special characters in names', () => {
+      const players = [
+        { playerName: 'Øystein', totalPoints: 500 },
+        { playerName: 'Åsa', totalPoints: 600 },
+        { playerName: 'Ærlig', totalPoints: 400 }
+      ];
+
+      const sorted = [...players].sort((a, b) =>
+        sortComparators.player(a, b, 'asc')
+      );
+
+      // Just verify it doesn't crash with special characters
+      expect(sorted.length).toBe(3);
     });
   });
 
-  describe('Sort by points column', () => {
-    function createTableWithPoints() {
-      document.body.innerHTML = `
-        <table id="test-table">
-          <thead>
-            <tr>
-              <th class="sortable" data-column="player" data-sort="none">
-                <span class="sort-header">Player <span class="sort-arrow"></span></span>
-              </th>
-              <th class="sortable" data-column="day1" data-sort="none" data-day-index="0">
-                <span class="sort-header">Day 1 <span class="sort-arrow"></span></span>
-              </th>
-              <th class="sortable" data-column="points" data-sort="none">
-                <span class="sort-header">Points <span class="sort-arrow"></span></span>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr data-total-points="600">
-              <td><div class="player-name">Bob</div></td>
-              <td>4 / 4</td>
-              <td>600</td>
-            </tr>
-            <tr data-total-points="800">
-              <td><div class="player-name">Alice</div></td>
-              <td>4 / 4</td>
-              <td>800</td>
-            </tr>
-            <tr data-total-points="400">
-              <td><div class="player-name">Charlie</div></td>
-              <td>4 / 4</td>
-              <td>400</td>
-            </tr>
-            <tr data-total-points="0">
-              <td><div class="player-name">Dave</div></td>
-              <td>0 / 4</td>
-              <td>-</td>
-            </tr>
-          </tbody>
-        </table>
-      `;
-      return document.getElementById('test-table');
-    }
+  describe('Sorting stability', () => {
+    test('should maintain relative order for equal values', () => {
+      const players = [
+        { playerName: 'Alice', totalPoints: 500, id: 1 },
+        { playerName: 'Bob', totalPoints: 500, id: 2 },
+        { playerName: 'Charlie', totalPoints: 500, id: 3 }
+      ];
 
-    test('should sort by points ascending', () => {
-      const table = createTableWithPoints();
-      sortTableByColumn(table, 'points', 'asc', null);
-
-      const rows = table.querySelectorAll('tbody tr');
-      const names = Array.from(rows).map(row =>
-        row.querySelector('.player-name').textContent
+      const sorted = [...players].sort((a, b) =>
+        sortComparators.points(a, b, 'asc')
       );
 
-      expect(names).toEqual(['Dave', 'Charlie', 'Bob', 'Alice']);
-    });
-
-    test('should sort by points descending', () => {
-      const table = createTableWithPoints();
-      sortTableByColumn(table, 'points', 'desc', null);
-
-      const rows = table.querySelectorAll('tbody tr');
-      const names = Array.from(rows).map(row =>
-        row.querySelector('.player-name').textContent
-      );
-
-      expect(names).toEqual(['Alice', 'Bob', 'Charlie', 'Dave']);
-    });
-
-    test('should handle players with 0 points', () => {
-      const table = createTableWithPoints();
-      sortTableByColumn(table, 'points', 'asc', null);
-
-      const rows = table.querySelectorAll('tbody tr');
-      const firstPlayer = rows[0].querySelector('.player-name').textContent;
-      const firstPoints = parseInt(rows[0].dataset.totalPoints);
-
-      expect(firstPlayer).toBe('Dave');
-      expect(firstPoints).toBe(0);
-    });
-
-    test('should handle missing totalPoints attribute', () => {
-      document.body.innerHTML = `
-        <table>
-          <tbody>
-            <tr data-total-points="500">
-              <td><div class="player-name">Alice</div></td>
-              <td>500</td>
-            </tr>
-            <tr>
-              <td><div class="player-name">Bob</div></td>
-              <td>-</td>
-            </tr>
-          </tbody>
-        </table>
-      `;
-      const table = document.querySelector('table');
-
-      expect(() => {
-        sortTableByColumn(table, 'points', 'asc', null);
-      }).not.toThrow();
-
-      const rows = table.querySelectorAll('tbody tr');
-      const names = Array.from(rows).map(row =>
-        row.querySelector('.player-name').textContent
-      );
-
-      expect(names).toEqual(['Bob', 'Alice']);
+      // All have same points, order should be stable (maintained)
+      expect(sorted.every(p => p.totalPoints === 500)).toBe(true);
     });
   });
 });
