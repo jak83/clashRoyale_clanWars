@@ -441,7 +441,6 @@ function renderHistory(history, currentMemberTags = []) {
             const prevP = prevPlayers[p.tag];
 
             let decksTotal = currP ? currP.decksUsed : 0;
-            let pointsTotal = currP ? (currP.fame || 0) : 0;
             let decksPrev = prevP ? prevP.decksUsed : 0;
 
             let dailyDecks = decksTotal - decksPrev;
@@ -449,7 +448,11 @@ function renderHistory(history, currentMemberTags = []) {
             if (dailyDecks < 4) isPerfectPlayer = false; // logic: if any day is less than 4, not perfect
 
             totalDecksForPlayer += dailyDecks;
-            totalPointsForPlayer = pointsTotal; // Use total points (cumulative)
+
+            // Get points from current day's data (cumulative total from API)
+            if (currP && currP.fame !== undefined) {
+                totalPointsForPlayer = currP.fame;
+            }
 
             // Color Logic
             let valClass = 'val-miss';
