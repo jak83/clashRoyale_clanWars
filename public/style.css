@@ -475,19 +475,21 @@ h2 {
     text-align: center;
 }
 
-/* Points column (ALWAYS LAST COLUMN) - VERY VISIBLE */
+/* Points column (ALWAYS LAST COLUMN) */
 .history-table th:last-child,
 .history-table td:last-child {
-    width: 100px !important;
-    min-width: 100px !important;
-    max-width: 100px !important;
+    width: 90px !important;
+    min-width: 90px !important;
+    max-width: 90px !important;
     text-align: center !important;
-    font-weight: 700 !important;
+    font-weight: 600;
     display: table-cell !important;
     visibility: visible !important;
-    background-color: #ffeb3b !important; /* Bright yellow */
-    color: #000 !important;
-    border: 2px solid red !important;
+}
+
+.history-table td:last-child {
+    color: var(--accent-green);
+    font-size: 0.95rem;
 }
 
 .history-table th {
