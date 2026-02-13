@@ -9,7 +9,6 @@ let countdownInterval = null;
  * @returns {Object} {totalDecks, maxDecks, percentage}
  */
 function calculateDeckCounterStats(playerData, selectedDay, availableDays) {
-    const totalPlayers = playerData.length;
     let totalDecks = 0;
     let daysCount = 1;
 
@@ -23,7 +22,9 @@ function calculateDeckCounterStats(playerData, selectedDay, availableDays) {
         daysCount = 1;
     }
 
-    const maxDecks = totalPlayers * 4 * daysCount;
+    // Use clan max capacity (50 players), not actual players in history
+    // This shows "what % of our clan's potential did we use?"
+    const maxDecks = 50 * 4 * daysCount;
     const percentage = maxDecks > 0 ? ((totalDecks / maxDecks) * 100).toFixed(1) : '0.0';
 
     return { totalDecks, maxDecks, percentage };
@@ -492,7 +493,7 @@ function renderHistory(history, currentMemberTags = []) {
 
     // Calculate total decks played for deck counter
     let totalDecksPlayed = 0;
-    const maxDecksPerDay = playerArray.length * 4; // Actual number of players × 4 decks
+    const maxDecksPerDay = 50 * 4; // Clan max capacity (50 players) × 4 decks - shows % of clan potential used
 
     playerArray.forEach(p => {
         const tr = document.createElement('tr');
@@ -618,13 +619,13 @@ function renderHistory(history, currentMemberTags = []) {
         dailyDecks: {}
     }));
 
-    // Actually, just calculate directly since we have the total
-    const maxDecks = playerArray.length * 4 * days.length;
+    // Calculate max based on clan capacity (50 players), not actual players in history
+    const maxDecks = 50 * 4 * days.length;
     const percentage = maxDecks > 0 ? ((totalDecksPlayed / maxDecks) * 100).toFixed(1) : '0.0';
     deckCounter.innerHTML = `<span style="color: var(--accent-green);">${totalDecksPlayed}</span> / ${maxDecks} decks played (${percentage}%)`;
 
-    // Store max decks per day on table for filtering (legacy, could be removed)
-    table.dataset.maxDecksPerDay = maxDecksPerDay;
+    // Store max decks per day on table for filtering
+    table.dataset.maxDecksPerDay = 50 * 4; // Clan capacity, not actual player count
 
     // Insert deck counter before the table
     container.insertBefore(deckCounter, table);

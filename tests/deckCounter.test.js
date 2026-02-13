@@ -113,15 +113,12 @@ describe('Deck Counter Calculations', () => {
         expect(maxDecks).not.toBe(800);
     });
 
-    test('REGRESSION: max decks should be based on actual player count, not hardcoded 50', () => {
-        const numPlayers = Object.keys(demoData.days['1'].players).length;
-        const maxDecksPerDay = numPlayers * 4;
+    test('Max decks should always be clan capacity (50 players)', () => {
+        // Clan capacity is always 50 players max, regardless of actual participants
+        // This shows "what % of our clan's potential did we use?"
+        const maxDecksPerDay = 50 * 4;
 
-        // Before fix: const maxDecksPerDay = 50 * 4; // Hardcoded!
-        // After fix: const maxDecksPerDay = playerArray.length * 4;
-
-        expect(maxDecksPerDay).toBe(40); // 10 players × 4 decks
-        expect(maxDecksPerDay).not.toBe(200); // Not 50 players × 4 decks
+        expect(maxDecksPerDay).toBe(200); // 50 players × 4 decks (clan capacity)
     });
 
     test('should only count visible players when calculating max decks', () => {
@@ -164,8 +161,8 @@ describe('Deck Counter Calculations', () => {
         const stats = calculateDeckCounterStats(playerData, 'all', 4);
 
         expect(stats.totalDecks).toBe(36); // 16 + 12 + 8
-        expect(stats.maxDecks).toBe(48); // 3 players × 4 decks × 4 days
-        expect(stats.percentage).toBe('75.0'); // 36/48 = 75%
+        expect(stats.maxDecks).toBe(800); // 50 players × 4 decks × 4 days (clan capacity)
+        expect(stats.percentage).toBe('4.5'); // 36/800 = 4.5%
     });
 
     test('Pure function: calculateDeckCounterStats with Day 1 filter', () => {
@@ -178,8 +175,8 @@ describe('Deck Counter Calculations', () => {
         const stats = calculateDeckCounterStats(playerData, '1', 4);
 
         expect(stats.totalDecks).toBe(9); // 4 + 3 + 2 (Day 1 only)
-        expect(stats.maxDecks).toBe(12); // 3 players × 4 decks × 1 day
-        expect(stats.percentage).toBe('75.0'); // 9/12 = 75%
+        expect(stats.maxDecks).toBe(200); // 50 players × 4 decks × 1 day (clan capacity)
+        expect(stats.percentage).toBe('4.5'); // 9/200 = 4.5%
     });
 
     test('Pure function: calculateDeckCounterStats with Day 2 filter', () => {
@@ -192,15 +189,15 @@ describe('Deck Counter Calculations', () => {
         const stats = calculateDeckCounterStats(playerData, '2', 4);
 
         expect(stats.totalDecks).toBe(9); // 4 + 3 + 2 (Day 2 only)
-        expect(stats.maxDecks).toBe(12); // 3 players × 4 decks × 1 day
-        expect(stats.percentage).toBe('75.0'); // 9/12 = 75%
+        expect(stats.maxDecks).toBe(200); // 50 players × 4 decks × 1 day (clan capacity)
+        expect(stats.percentage).toBe('4.5'); // 9/200 = 4.5%
     });
 
     test('Pure function: handles empty player data', () => {
         const stats = calculateDeckCounterStats([], 'all', 4);
 
         expect(stats.totalDecks).toBe(0);
-        expect(stats.maxDecks).toBe(0);
+        expect(stats.maxDecks).toBe(800); // Always 50 players × 4 decks × 4 days
         expect(stats.percentage).toBe('0.0');
     });
 
@@ -212,12 +209,13 @@ describe('Deck Counter Calculations', () => {
         const stats = calculateDeckCounterStats(playerData, '3', 4);
 
         expect(stats.totalDecks).toBe(0); // Day 3 missing, should be 0
-        expect(stats.maxDecks).toBe(4); // 1 player × 4 decks × 1 day
+        expect(stats.maxDecks).toBe(200); // Always 50 players × 4 decks × 1 day
         expect(stats.percentage).toBe('0.0');
     });
 
-    test('REGRESSION: Pure function never allows >100% with correct player count', () => {
-        // This was the bug: using hardcoded 50 players instead of actual count
+    test('REGRESSION: Percentage uses clan capacity, not actual players', () => {
+        // Deck counter should always show clan capacity (50 players)
+        // This gives meaningful % of clan potential used
         const playerData = [
             { totalDecks: 16, dailyDecks: { '1': 4, '2': 4, '3': 4, '4': 4 } },
             { totalDecks: 16, dailyDecks: { '1': 4, '2': 4, '3': 4, '4': 4 } }
@@ -225,10 +223,10 @@ describe('Deck Counter Calculations', () => {
 
         const stats = calculateDeckCounterStats(playerData, '2', 4);
 
-        // 2 players × 4 decks = 8 max (not hardcoded 50 × 4 = 200)
-        expect(stats.maxDecks).toBe(8);
+        // Always uses 50 players (clan capacity), not actual 2 players
+        expect(stats.maxDecks).toBe(200); // 50 × 4 = 200
         expect(stats.totalDecks).toBe(8);
-        expect(parseFloat(stats.percentage)).toBeLessThanOrEqual(100);
+        expect(stats.percentage).toBe('4.0'); // 8/200 = 4%
     });
 
     test('REGRESSION: percentage calculation should never exceed 100% with correct logic', () => {
