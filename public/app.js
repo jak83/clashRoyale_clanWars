@@ -908,6 +908,33 @@ function filterByDay(selectedDay, table, activeBtn, silent = false) {
         activeBtn.classList.add('active');
     }
 
+    // "Show All" should reveal ALL players (completed + inactive left)
+    if (selectedDay === 'all') {
+        table.querySelectorAll('tbody tr').forEach(row => {
+            // Show completed players
+            row.classList.remove('hidden-row');
+            // Show inactive left players
+            if (row.dataset.hiddenByDefault === 'true') {
+                row.style.display = '';
+            }
+        });
+
+        // Update toggle button states to reflect visible state
+        const toggleCompletedBtn = document.getElementById('toggle-history-completed');
+        if (toggleCompletedBtn) {
+            toggleCompletedBtn.dataset.hidden = 'false';
+            toggleCompletedBtn.textContent = 'Hide Completed';
+            toggleCompletedBtn.style.backgroundColor = '';
+        }
+
+        const toggleLeftBtn = document.getElementById('toggle-left-players');
+        if (toggleLeftBtn) {
+            toggleLeftBtn.dataset.hidden = 'false';
+            toggleLeftBtn.textContent = 'Hide Inactive Left Players';
+            toggleLeftBtn.style.backgroundColor = '';
+        }
+    }
+
     // Update podium based on filtered days
     const history = table.dataset.history ? JSON.parse(table.dataset.history) : null;
     if (history) {
