@@ -167,19 +167,16 @@ async function fetchWarStats() {
 function calculateTimeUntilReset() {
     const now = new Date();
 
-    // Convert to Helsinki time (Europe/Helsinki)
-    const helsinkiTime = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Helsinki' }));
+    // Next reset is at 10:00 UTC (daily deck reset time)
+    const nextReset = new Date(now);
+    nextReset.setUTCHours(10, 0, 0, 0);
 
-    // Next reset is at 10:00 AM Helsinki time
-    const nextReset = new Date(helsinkiTime);
-    nextReset.setHours(10, 0, 0, 0);
-
-    // If we're past 10:00 AM Helsinki time today, target tomorrow
-    if (helsinkiTime >= nextReset) {
-        nextReset.setDate(nextReset.getDate() + 1);
+    // If we're past 10:00 UTC today, target tomorrow
+    if (now >= nextReset) {
+        nextReset.setUTCDate(nextReset.getUTCDate() + 1);
     }
 
-    const diff = nextReset - helsinkiTime;
+    const diff = nextReset - now;
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
     const seconds = Math.floor((diff % (1000 * 60)) / 1000);
@@ -226,9 +223,9 @@ function renderWarStats(currentRace, raceLog) {
                     <div class="stat-label" style="margin-top: 0.5rem;">${ourMedal ? '' : `${ourRank} / ${currentStandings.length}`}</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-label">Time Until Reset</div>
+                    <div class="stat-label">Time Until Deck Reset</div>
                     <div class="stat-value" id="countdown-timer" style="font-size: 2rem;">${timeRemaining.formatted}</div>
-                    <div class="stat-label" style="margin-top: 0.5rem;">Resets at 10:00 Helsinki time</div>
+                    <div class="stat-label" style="margin-top: 0.5rem;">Resets daily at 10:00 UTC</div>
                 </div>
             </div>
             <h4 style="margin-top: 1.5rem; margin-bottom: 0.5rem;">🏆 Live Standings</h4>
