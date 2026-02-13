@@ -383,7 +383,6 @@ function renderHistory(history, currentMemberTags = []) {
     pointsHeader.dataset.sort = 'none';
     pointsHeader.title = 'Total points earned';
     headerRow.appendChild(pointsHeader);
-    console.log('Points header added to Daily History table');
 
     thead.appendChild(headerRow);
     table.appendChild(thead);
@@ -465,11 +464,6 @@ function renderHistory(history, currentMemberTags = []) {
         // Add points column as rightmost column
         const pointsDisplay = totalPointsForPlayer > 0 ? totalPointsForPlayer.toLocaleString() : '-';
         rowHtml += `<td class="history-val points-cell">${pointsDisplay}</td>`;
-
-        // Debug: log points for first few players
-        if (allTags.indexOf(p.tag) < 3) {
-            console.log(`Player ${p.name}: totalPoints=${totalPointsForPlayer}, display=${pointsDisplay}`);
-        }
 
         // Add to total deck count
         totalDecksPlayed += totalDecksForPlayer;
