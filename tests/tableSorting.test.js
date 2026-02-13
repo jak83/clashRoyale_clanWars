@@ -34,6 +34,89 @@ describe('Table Sorting Logic', () => {
     }
   };
 
+  // Define all sortable columns with test data
+  const sortableColumns = [
+    {
+      name: 'player',
+      type: 'player',
+      testData: [
+        { playerName: 'Charlie', totalPoints: 500 },
+        { playerName: 'Alice', totalPoints: 800 },
+        { playerName: 'Bob', totalPoints: 600 }
+      ],
+      expectedAsc: ['Alice', 'Bob', 'Charlie'],
+      expectedDesc: ['Charlie', 'Bob', 'Alice'],
+      getValue: (item) => item.playerName
+    },
+    {
+      name: 'day1',
+      type: 'day',
+      dayValue: 'day1',
+      testData: [
+        { playerName: 'Alice', day1: 4 },
+        { playerName: 'Bob', day1: 0 },
+        { playerName: 'Charlie', day1: 2 }
+      ],
+      expectedAsc: ['Bob', 'Charlie', 'Alice'],
+      expectedDesc: ['Alice', 'Charlie', 'Bob'],
+      getValue: (item) => item.playerName
+    },
+    {
+      name: 'day2',
+      type: 'day',
+      dayValue: 'day2',
+      testData: [
+        { playerName: 'Alice', day2: 2 },
+        { playerName: 'Bob', day2: 4 },
+        { playerName: 'Charlie', day2: 4 }
+      ],
+      expectedAsc: ['Alice', 'Bob', 'Charlie'],
+      expectedDesc: ['Bob', 'Charlie', 'Alice'],
+      getValue: (item) => item.playerName
+    },
+    {
+      name: 'points',
+      type: 'points',
+      testData: [
+        { playerName: 'Bob', totalPoints: 600 },
+        { playerName: 'Alice', totalPoints: 800 },
+        { playerName: 'Charlie', totalPoints: 400 }
+      ],
+      expectedAsc: ['Charlie', 'Bob', 'Alice'],
+      expectedDesc: ['Alice', 'Bob', 'Charlie'],
+      getValue: (item) => item.playerName
+    }
+  ];
+
+  // Parameterized test: Test ALL columns with one loop
+  describe('All sortable columns', () => {
+    sortableColumns.forEach(column => {
+      describe(`Sort by ${column.name}`, () => {
+        test('should sort ascending', () => {
+          const comparator = column.type === 'day'
+            ? (a, b) => sortComparators.day(a, b, 'asc', column.dayValue)
+            : (a, b) => sortComparators[column.type](a, b, 'asc');
+
+          const sorted = [...column.testData].sort(comparator);
+          const result = sorted.map(column.getValue);
+
+          expect(result).toEqual(column.expectedAsc);
+        });
+
+        test('should sort descending', () => {
+          const comparator = column.type === 'day'
+            ? (a, b) => sortComparators.day(a, b, 'desc', column.dayValue)
+            : (a, b) => sortComparators[column.type](a, b, 'desc');
+
+          const sorted = [...column.testData].sort(comparator);
+          const result = sorted.map(column.getValue);
+
+          expect(result).toEqual(column.expectedDesc);
+        });
+      });
+    });
+  });
+
   describe('Sort by player name', () => {
     const players = [
       { playerName: 'Charlie', totalPoints: 500 },
