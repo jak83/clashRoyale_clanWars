@@ -483,6 +483,7 @@ function renderHistory(history, currentMemberTags = []) {
         let totalDecksForPlayer = 0; // Track total decks for this player
         let totalPointsForPlayer = 0; // Track total points for this player
         const dailyPointsMap = {}; // Track points per day
+        const dailyDecksMap = {}; // Track decks per day
 
         days.forEach((day, index) => {
             const currentDayObj = history.days[day];
@@ -501,6 +502,7 @@ function renderHistory(history, currentMemberTags = []) {
             if (dailyDecks < 0) dailyDecks = 0;
             if (dailyDecks < 4) isPerfectPlayer = false; // logic: if any day is less than 4, not perfect
 
+            dailyDecksMap[day] = dailyDecks;
             totalDecksForPlayer += dailyDecks;
 
             // Calculate daily points (difference from previous day)
@@ -530,6 +532,7 @@ function renderHistory(history, currentMemberTags = []) {
         tr.dataset.totalDecks = totalDecksForPlayer;
         tr.dataset.totalPoints = totalPointsForPlayer;
         tr.dataset.dailyPoints = JSON.stringify(dailyPointsMap); // Store daily points for filtering
+        tr.dataset.dailyDecks = JSON.stringify(dailyDecksMap); // Store daily decks for filtering
 
         if (isPerfectPlayer) {
             tr.classList.add('history-row-completed');
@@ -578,11 +581,15 @@ function renderHistory(history, currentMemberTags = []) {
     // Display deck counter
     const deckCounter = document.createElement('div');
     deckCounter.className = 'deck-counter';
+    deckCounter.id = 'deck-counter';
     deckCounter.style.cssText = 'text-align: center; margin: 0.5rem 0; font-size: 1.1rem; font-weight: 600; color: var(--accent-blue);';
     const totalDaysShown = days.length;
     const maxDecks = maxDecksPerDay * totalDaysShown;
     const percentage = maxDecks > 0 ? ((totalDecksPlayed / maxDecks) * 100).toFixed(1) : 0;
     deckCounter.innerHTML = `<span style="color: var(--accent-green);">${totalDecksPlayed}</span> / ${maxDecks} decks played (${percentage}%)`;
+
+    // Store max decks per day on table for filtering
+    table.dataset.maxDecksPerDay = maxDecksPerDay;
 
     // Insert deck counter before the table
     container.insertBefore(deckCounter, table);
@@ -955,6 +962,44 @@ function filterByDay(selectedDay, table, activeBtn, silent = false) {
             console.error('Error parsing daily points:', e);
         }
     });
+
+    // Update deck counter based on filtered days
+    const deckCounter = document.getElementById('deck-counter');
+    if (deckCounter) {
+        const maxDecksPerDay = parseInt(table.dataset.maxDecksPerDay) || 200;
+        let totalDecksForFilter = 0;
+        let daysCount = 1;
+
+        if (selectedDay === 'all') {
+            // Show total across all days
+            table.querySelectorAll('tbody tr').forEach(row => {
+                totalDecksForFilter += parseInt(row.dataset.totalDecks) || 0;
+            });
+            // Count number of day columns
+            const dayCols = Array.from(table.querySelectorAll('thead th')).filter(th =>
+                th.textContent.match(/Day (\d+)/)
+            );
+            daysCount = dayCols.length;
+        } else {
+            // Show only selected day's decks
+            table.querySelectorAll('tbody tr').forEach(row => {
+                const dailyDecksData = row.dataset.dailyDecks;
+                if (dailyDecksData) {
+                    try {
+                        const dailyDecksMap = JSON.parse(dailyDecksData);
+                        totalDecksForFilter += dailyDecksMap[selectedDay] || 0;
+                    } catch (e) {
+                        console.error('Error parsing daily decks:', e);
+                    }
+                }
+            });
+            daysCount = 1;
+        }
+
+        const maxDecks = maxDecksPerDay * daysCount;
+        const percentage = maxDecks > 0 ? ((totalDecksForFilter / maxDecks) * 100).toFixed(1) : 0;
+        deckCounter.innerHTML = `<span style="color: var(--accent-green);">${totalDecksForFilter}</span> / ${maxDecks} decks played (${percentage}%)`;
+    }
 
     // Update player count after filtering
     updatePlayerCount();
