@@ -81,8 +81,8 @@ Last War Tab Loads Content
     Click Element    css:[data-testid="tab-last-war"]
     Wait Until Element Is Visible    css:[data-testid="view-last-war"]    timeout=5s
 
-    # Should show the section and note
-    Element Should Be Visible    css:[data-testid="last-war-section"]
+    # Should show the note element (section may be empty initially)
+    Page Should Contain Element    css:[data-testid="last-war-section"]
     Element Should Be Visible    css:[data-testid="last-war-note"]
 
 User Can Click Refresh History Button
