@@ -182,19 +182,15 @@ function renderWarStats(currentRace, raceLog) {
         const sortedStandings = [...currentStandings].sort((a, b) => b.fame - a.fame);
         const ourRank = sortedStandings.findIndex(c => c.tag === clanTag) + 1;
 
+        const ourMedal = ourRank === 1 ? '🥇' : ourRank === 2 ? '🥈' : ourRank === 3 ? '🥉' : '';
+        const medalDisplay = ourMedal || `${ourRank}th`;
+
         currentSection.innerHTML += `
             <div class="stats-grid">
                 <div class="stat-card">
-                    <div class="stat-label">Current Rank</div>
-                    <div class="stat-value">${ourRank} / ${currentStandings.length}</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">Fame (Points)</div>
-                    <div class="stat-value">${ourClan.fame.toLocaleString()}</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">Repair Points</div>
-                    <div class="stat-value">${(ourClan.repairPoints || 0).toLocaleString()}</div>
+                    <div class="stat-label">Current Position</div>
+                    <div class="stat-value" style="font-size: 3rem;">${ourMedal || ourRank}</div>
+                    <div class="stat-label" style="margin-top: 0.5rem;">${ourMedal ? '' : `${ourRank} / ${currentStandings.length}`}</div>
                 </div>
             </div>
             <h4 style="margin-top: 1.5rem; margin-bottom: 0.5rem;">🏆 Live Standings</h4>
@@ -227,24 +223,17 @@ function renderWarStats(currentRace, raceLog) {
             lastSection.style.marginTop = '2rem';
             lastSection.innerHTML = '<h3>📜 Last War Results</h3>';
 
-            const result = lastWarClan.rank === 1 ? '🏆 WON' : '❌ LOST';
-            const resultClass = lastWarClan.rank === 1 ? 'result-won' : 'result-lost';
+            const lastMedal = lastWarClan.rank === 1 ? '🥇' : lastWarClan.rank === 2 ? '🥈' : lastWarClan.rank === 3 ? '🥉' : '';
+            const resultClass = lastWarClan.rank === 1 ? 'result-won' : '';
             const trophyChange = lastWarClan.trophyChange;
             const trophyClass = trophyChange > 0 ? 'trophy-positive' : trophyChange < 0 ? 'trophy-negative' : '';
 
             lastSection.innerHTML += `
                 <div class="stats-grid">
                     <div class="stat-card ${resultClass}">
-                        <div class="stat-label">Result</div>
-                        <div class="stat-value">${result}</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Final Rank</div>
-                        <div class="stat-value">${lastWarClan.rank} / ${lastWar.standings.length}</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Final Fame</div>
-                        <div class="stat-value">${lastWarClan.clan.fame.toLocaleString()}</div>
+                        <div class="stat-label">Final Position</div>
+                        <div class="stat-value" style="font-size: 3rem;">${lastMedal || lastWarClan.rank}</div>
+                        <div class="stat-label" style="margin-top: 0.5rem;">${lastMedal ? '' : `${lastWarClan.rank} / ${lastWar.standings.length}`}</div>
                     </div>
                     <div class="stat-card ${trophyClass}">
                         <div class="stat-label">Trophy Change</div>
@@ -359,6 +348,15 @@ function renderHistory(history, currentMemberTags = []) {
     playerHeader.dataset.sort = 'none';
     headerRow.appendChild(playerHeader);
 
+    // Medals header with sort
+    const medalsHeader = document.createElement('th');
+    medalsHeader.innerHTML = '<span class="sort-header">🏅 <span class="sort-arrow"></span></span>';
+    medalsHeader.classList.add('sortable', 'history-val');
+    medalsHeader.dataset.column = 'medals';
+    medalsHeader.dataset.sort = 'none';
+    medalsHeader.title = 'Total medals earned';
+    headerRow.appendChild(medalsHeader);
+
     // Day headers with sort
     days.forEach(day => {
         const dayObj = history.days[day];
@@ -402,6 +400,49 @@ function renderHistory(history, currentMemberTags = []) {
 
     playerArray.sort((a, b) => a.name.localeCompare(b.name));
 
+    // Calculate top 3 performers per day for medals
+    const dayMedals = {};
+    days.forEach((day, index) => {
+        const currentDayObj = history.days[day];
+        const prevDayObj = index > 0 ? history.days[days[index - 1]] : null;
+        const currentPlayers = currentDayObj.players || currentDayObj;
+        const prevPlayers = prevDayObj ? (prevDayObj.players || prevDayObj) : {};
+
+        // Calculate daily decks for all players
+        const dailyPerformance = [];
+        allTags.forEach(tag => {
+            const currP = currentPlayers[tag];
+            const prevP = prevPlayers[tag];
+            const decksTotal = currP ? currP.decksUsed : 0;
+            const decksPrev = prevP ? prevP.decksUsed : 0;
+            let dailyDecks = decksTotal - decksPrev;
+            if (dailyDecks < 0) dailyDecks = 0;
+
+            if (dailyDecks > 0) {
+                dailyPerformance.push({ tag, dailyDecks });
+            }
+        });
+
+        // Sort and assign medals to top 3
+        dailyPerformance.sort((a, b) => b.dailyDecks - a.dailyDecks);
+        dayMedals[day] = {};
+        if (dailyPerformance[0] && dailyPerformance[0].dailyDecks >= 4) {
+            dayMedals[day][dailyPerformance[0].tag] = '🥇';
+        }
+        if (dailyPerformance[1] && dailyPerformance[1].dailyDecks >= 4 &&
+            dailyPerformance[1].dailyDecks === dailyPerformance[0]?.dailyDecks) {
+            dayMedals[day][dailyPerformance[1].tag] = '🥇';
+        } else if (dailyPerformance[1] && dailyPerformance[1].dailyDecks >= 4) {
+            dayMedals[day][dailyPerformance[1].tag] = '🥈';
+        }
+        if (dailyPerformance[2] && dailyPerformance[2].dailyDecks >= 4 &&
+            dailyPerformance[2].dailyDecks === dailyPerformance[1]?.dailyDecks) {
+            dayMedals[day][dailyPerformance[2].tag] = dayMedals[day][dailyPerformance[1].tag];
+        } else if (dailyPerformance[2] && dailyPerformance[2].dailyDecks >= 4) {
+            dayMedals[day][dailyPerformance[2].tag] = '🥉';
+        }
+    });
+
     // Calculate total decks played for deck counter
     let totalDecksPlayed = 0;
     const maxDecksPerDay = 50 * 4; // 50 players × 4 decks
@@ -421,6 +462,7 @@ function renderHistory(history, currentMemberTags = []) {
 
         let isPerfectPlayer = true; // Assume perfect until proven otherwise
         let totalDecksForPlayer = 0; // Track total decks for this player
+        let playerMedals = []; // Track medals earned by this player
 
         days.forEach((day, index) => {
             const currentDayObj = history.days[day];
@@ -445,14 +487,23 @@ function renderHistory(history, currentMemberTags = []) {
             let valClass = 'val-miss';
             if (dailyDecks >= 4) valClass = 'val-perfect';
 
-            rowHtml += `<td class="history-val ${valClass}">${dailyDecks} / 4</td>`;
+            // Add medal if player is top 3 for this day
+            const medal = dayMedals[day] && dayMedals[day][p.tag] ? dayMedals[day][p.tag] : '';
+            if (medal) playerMedals.push(medal);
+
+            rowHtml += `<td class="history-val ${valClass}">${medal ? medal + ' ' : ''}${dailyDecks} / 4</td>`;
         });
 
         // Add to total deck count
         totalDecksPlayed += totalDecksForPlayer;
 
-        // Store total decks on row for filtering
+        // Store total decks and medals on row for filtering/sorting
         tr.dataset.totalDecks = totalDecksForPlayer;
+        tr.dataset.medalCount = playerMedals.length;
+
+        // Add medals column after player name
+        const medalsDisplay = playerMedals.length > 0 ? playerMedals.join(' ') : '-';
+        rowHtml = rowHtml.replace('</td>', `</td><td class="history-val medals-cell">${medalsDisplay}</td>`);
 
         if (isPerfectPlayer) {
             tr.classList.add('history-row-completed');
@@ -509,6 +560,69 @@ function renderHistory(history, currentMemberTags = []) {
 
     // Insert deck counter before the table
     container.insertBefore(deckCounter, table);
+
+    // Create podium for top 3 overall performers
+    const podium = document.createElement('div');
+    podium.className = 'war-podium';
+    podium.style.cssText = 'display: flex; justify-content: center; gap: 1rem; margin: 1rem 0; flex-wrap: wrap;';
+
+    // Calculate overall performance (total decks across all days)
+    const overallPerformance = [];
+    allTags.forEach(tag => {
+        let totalDecks = 0;
+        let medals = [];
+        let name = tag;
+
+        days.forEach(day => {
+            const dayObj = history.days[day];
+            const participants = dayObj.players || dayObj;
+            if (participants && participants[tag]) {
+                name = participants[tag].name;
+            }
+
+            // Get medal for this day
+            if (dayMedals[day] && dayMedals[day][tag]) {
+                medals.push(dayMedals[day][tag]);
+            }
+        });
+
+        // Get final total decks from last day
+        const lastDay = days[days.length - 1];
+        const lastDayObj = history.days[lastDay];
+        const lastDayPlayers = lastDayObj.players || lastDayObj;
+        if (lastDayPlayers[tag]) {
+            totalDecks = lastDayPlayers[tag].decksUsed || 0;
+        }
+
+        overallPerformance.push({ tag, name, totalDecks, medalCount: medals.length });
+    });
+
+    // Sort by total decks and get top 3
+    overallPerformance.sort((a, b) => b.totalDecks - a.totalDecks);
+    const top3 = overallPerformance.slice(0, 3);
+
+    top3.forEach((player, index) => {
+        const podiumMedal = index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉';
+        const position = index === 0 ? '1st' : index === 1 ? '2nd' : '3rd';
+        const podiumCard = document.createElement('div');
+        podiumCard.style.cssText = `
+            background: var(--card-bg);
+            border: 2px solid ${index === 0 ? 'var(--accent-green)' : index === 1 ? '#C0C0C0' : '#CD7F32'};
+            border-radius: 12px;
+            padding: 1rem;
+            text-align: center;
+            min-width: 150px;
+        `;
+        podiumCard.innerHTML = `
+            <div style="font-size: 2.5rem;">${podiumMedal}</div>
+            <div style="font-weight: 600; margin: 0.5rem 0;">${player.name}</div>
+            <div style="color: var(--text-secondary); font-size: 0.9rem;">${player.totalDecks} decks total</div>
+            <div style="color: var(--text-secondary); font-size: 0.85rem;">${player.medalCount} daily medals</div>
+        `;
+        podium.appendChild(podiumCard);
+    });
+
+    container.insertBefore(podium, table);
 
     // Create day filter buttons - always show 1-4
     createDayFilters(['1', '2', '3', '4'], table);
