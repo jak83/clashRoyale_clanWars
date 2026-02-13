@@ -665,19 +665,28 @@ function createPodium(history, days) {
         Object.keys(participants).forEach(tag => allTags.add(tag));
     });
 
-    // Calculate stats for each player
+    // Calculate stats for each player (daily decks for filtered days)
     allTags.forEach(tag => {
         let name = tag;
         let totalPoints = 0;
         let totalDecks = 0;
 
-        days.forEach(day => {
+        days.forEach((day, index) => {
             const dayObj = history.days[day];
+            const prevDayObj = index > 0 ? history.days[days[index - 1]] : null;
+
             const participants = dayObj.players || dayObj;
+            const prevParticipants = prevDayObj ? (prevDayObj.players || prevDayObj) : {};
+
             if (participants[tag]) {
                 name = participants[tag].name;
                 totalPoints = participants[tag].fame || 0; // Use latest cumulative
-                totalDecks = participants[tag].decksUsed || 0;
+
+                // Calculate DAILY decks (current - previous)
+                const currentDecks = participants[tag].decksUsed || 0;
+                const prevDecks = prevParticipants[tag] ? (prevParticipants[tag].decksUsed || 0) : 0;
+                const dailyDecks = Math.max(0, currentDecks - prevDecks);
+                totalDecks += dailyDecks;
             }
         });
 
