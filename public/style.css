@@ -311,10 +311,10 @@ h2 {
 
     .history-table .player-name {
         font-size: 0.65rem;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        max-width: 70px;
+        white-space: normal;
+        word-break: break-word;
+        line-height: 1.2;
+        max-width: 120px;
     }
 
     .history-table .player-tag {
