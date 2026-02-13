@@ -108,6 +108,7 @@ function updateHistory(raceData, baseHistory = null, save = true) {
         players[p.tag] = {
             name: p.name,
             decksUsed: p.decksUsed,
+            decksUsedToday: p.decksUsedToday || 0,  // Daily decks (0-4)
             fame: p.fame
         };
     });

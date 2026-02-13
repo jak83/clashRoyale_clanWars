@@ -10,7 +10,7 @@ describe('historyManager', () => {
         periodType: 'warDay',
         clan: {
           participants: [
-            { tag: '#TEST1', name: 'Player1', decksUsed: 0, fame: 0 }
+            { tag: '#TEST1', name: 'Player1', decksUsed: 0, decksUsedToday: 0, fame: 0 }
           ]
         }
       };
@@ -21,6 +21,7 @@ describe('historyManager', () => {
       expect(history.days[1].players['#TEST1']).toEqual({
         name: 'Player1',
         decksUsed: 0,
+        decksUsedToday: 0,
         fame: 0
       });
     });
@@ -33,7 +34,7 @@ describe('historyManager', () => {
         periodType: 'warDay',
         clan: {
           participants: [
-            { tag: '#TEST1', name: 'Player1', decksUsed: 2, fame: 200 }
+            { tag: '#TEST1', name: 'Player1', decksUsed: 2, decksUsedToday: 2, fame: 200 }
           ]
         }
       };
@@ -51,7 +52,7 @@ describe('historyManager', () => {
         periodType: 'warDay',
         clan: {
           participants: [
-            { tag: '#TEST1', name: 'Player1', decksUsed: 3, fame: 300 }
+            { tag: '#TEST1', name: 'Player1', decksUsed: 3, decksUsedToday: 1, fame: 300 }
           ]
         }
       };
@@ -69,7 +70,7 @@ describe('historyManager', () => {
         periodType: 'warDay',
         clan: {
           participants: [
-            { tag: '#TEST1', name: 'Player1', decksUsed: 4, fame: 400 }
+            { tag: '#TEST1', name: 'Player1', decksUsed: 4, decksUsedToday: 0, fame: 400 }
           ]
         }
       };
@@ -93,7 +94,7 @@ describe('historyManager', () => {
         periodType: 'training',
         clan: {
           participants: [
-            { tag: '#TEST1', name: 'Player1', decksUsed: 0, fame: 0 }
+            { tag: '#TEST1', name: 'Player1', decksUsed: 0, decksUsedToday: 0, fame: 0 }
           ]
         }
       };
@@ -111,7 +112,7 @@ describe('historyManager', () => {
           '1': {
             timestamp: '2026-02-12T10:00:00.000Z',
             players: {
-              '#TEST1': { name: 'Player1', decksUsed: 2, fame: 200 }
+              '#TEST1': { name: 'Player1', decksUsed: 2, decksUsedToday: 2, fame: 200 }
             }
           }
         }
@@ -124,7 +125,7 @@ describe('historyManager', () => {
         periodType: 'warDay',
         clan: {
           participants: [
-            { tag: '#TEST1', name: 'Player1', decksUsed: 4, fame: 400 }
+            { tag: '#TEST1', name: 'Player1', decksUsed: 4, decksUsedToday: 2, fame: 400 }
           ]
         }
       };

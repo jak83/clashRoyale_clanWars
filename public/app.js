@@ -338,7 +338,7 @@ function renderWarStats(currentRace, raceLog) {
                                         <div style="font-size: 0.75rem; color: var(--text-secondary);">Member</div>
                                     </td>
                                     <td class="stat-column">${player.decksUsed || 0} 👑</td>
-                                    <td class="stat-column">${player.decksUsedToday || 0} 👑</td>
+                                    <td class="stat-column">${player.decksUsedToday || 0}/4 👑</td>
                                     <td class="stat-column">${player.boatAttacks || 0} 🛡️</td>
                                     <td class="stat-column fame-column">${(player.fame || 0).toLocaleString()} 🏅</td>
                                 </tr>
