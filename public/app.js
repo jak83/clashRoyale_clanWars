@@ -1,6 +1,34 @@
 // Global countdown interval
 let countdownInterval = null;
 
+/**
+ * Pure function to calculate deck counter statistics
+ * @param {Array} playerData - Array of {totalDecks, dailyDecks: {1: x, 2: y, ...}}
+ * @param {string} selectedDay - 'all' or '1', '2', '3', '4'
+ * @param {number} availableDays - Number of available days (1-4)
+ * @returns {Object} {totalDecks, maxDecks, percentage}
+ */
+function calculateDeckCounterStats(playerData, selectedDay, availableDays) {
+    const totalPlayers = playerData.length;
+    let totalDecks = 0;
+    let daysCount = 1;
+
+    if (selectedDay === 'all') {
+        // Sum total decks across all days
+        totalDecks = playerData.reduce((sum, p) => sum + p.totalDecks, 0);
+        daysCount = availableDays;
+    } else {
+        // Sum daily decks for selected day
+        totalDecks = playerData.reduce((sum, p) => sum + (p.dailyDecks[selectedDay] || 0), 0);
+        daysCount = 1;
+    }
+
+    const maxDecks = totalPlayers * 4 * daysCount;
+    const percentage = maxDecks > 0 ? ((totalDecks / maxDecks) * 100).toFixed(1) : '0.0';
+
+    return { totalDecks, maxDecks, percentage };
+}
+
 function updatePlayerCount() {
     const countElement = document.getElementById('player-count');
     if (!countElement) return;
@@ -999,42 +1027,28 @@ function filterByDay(selectedDay, table, activeBtn, silent = false) {
     // Update deck counter based on filtered days
     const deckCounter = document.getElementById('deck-counter');
     if (deckCounter) {
-        let totalDecksForFilter = 0;
-        let visiblePlayerCount = 0;
-        let daysCount = 1;
-
-        // Count ALL players (rows in table), regardless of visibility filters
-        const totalPlayers = table.querySelectorAll('tbody tr').length;
-
-        if (selectedDay === 'all') {
-            // Show total across all days
-            table.querySelectorAll('tbody tr').forEach(row => {
-                totalDecksForFilter += parseInt(row.dataset.totalDecks) || 0;
-            });
-            // Count number of day columns
-            const dayCols = Array.from(table.querySelectorAll('thead th')).filter(th =>
-                th.textContent.match(/Day (\d+)/)
-            );
-            daysCount = dayCols.length;
-        } else {
-            // Show only selected day's decks
-            table.querySelectorAll('tbody tr').forEach(row => {
-                const dailyDecksData = row.dataset.dailyDecks;
-                if (dailyDecksData) {
-                    try {
-                        const dailyDecksMap = JSON.parse(dailyDecksData);
-                        totalDecksForFilter += dailyDecksMap[selectedDay] || 0;
-                    } catch (e) {
-                        console.error('Error parsing daily decks:', e);
-                    }
+        // Gather data from DOM
+        const playerData = Array.from(table.querySelectorAll('tbody tr')).map(row => ({
+            totalDecks: parseInt(row.dataset.totalDecks) || 0,
+            dailyDecks: (() => {
+                try {
+                    return JSON.parse(row.dataset.dailyDecks || '{}');
+                } catch (e) {
+                    console.error('Error parsing daily decks:', e);
+                    return {};
                 }
-            });
-            daysCount = 1;
-        }
+            })()
+        }));
 
-        const maxDecks = totalPlayers * 4 * daysCount;
-        const percentage = maxDecks > 0 ? ((totalDecksForFilter / maxDecks) * 100).toFixed(1) : 0;
-        deckCounter.innerHTML = `<span style="color: var(--accent-green);">${totalDecksForFilter}</span> / ${maxDecks} decks played (${percentage}%)`;
+        const availableDays = Array.from(table.querySelectorAll('thead th'))
+            .filter(th => th.textContent.match(/Day (\d+)/))
+            .length;
+
+        // Calculate stats (pure function, testable)
+        const stats = calculateDeckCounterStats(playerData, selectedDay, availableDays);
+
+        // Display result
+        deckCounter.innerHTML = `<span style="color: var(--accent-green);">${stats.totalDecks}</span> / ${stats.maxDecks} decks played (${stats.percentage}%)`;
     }
 
     // Update player count after filtering

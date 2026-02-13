@@ -4,6 +4,17 @@
  */
 
 const demoManager = require('../demoManager');
+const fs = require('fs');
+const path = require('path');
+
+// Load the pure function from app.js for testing
+const appJsContent = fs.readFileSync(path.join(__dirname, '../public/app.js'), 'utf8');
+const functionMatch = appJsContent.match(/function calculateDeckCounterStats\([\s\S]*?\n\}/);
+if (!functionMatch) {
+    throw new Error('Could not extract calculateDeckCounterStats function from app.js');
+}
+// Create an isolated function for testing
+const calculateDeckCounterStats = eval(`(${functionMatch[0].replace('function calculateDeckCounterStats', 'function')})`);
 
 describe('Deck Counter Calculations', () => {
     let demoData;
@@ -141,6 +152,83 @@ describe('Deck Counter Calculations', () => {
         const percentage = maxDecks > 0 ? (totalDecks / maxDecks) * 100 : 0;
 
         expect(percentage).toBe(0.0);
+    });
+
+    test('Pure function: calculateDeckCounterStats with all days', () => {
+        const playerData = [
+            { totalDecks: 16, dailyDecks: { '1': 4, '2': 4, '3': 4, '4': 4 } },
+            { totalDecks: 12, dailyDecks: { '1': 3, '2': 3, '3': 3, '4': 3 } },
+            { totalDecks: 8, dailyDecks: { '1': 2, '2': 2, '3': 2, '4': 2 } }
+        ];
+
+        const stats = calculateDeckCounterStats(playerData, 'all', 4);
+
+        expect(stats.totalDecks).toBe(36); // 16 + 12 + 8
+        expect(stats.maxDecks).toBe(48); // 3 players × 4 decks × 4 days
+        expect(stats.percentage).toBe('75.0'); // 36/48 = 75%
+    });
+
+    test('Pure function: calculateDeckCounterStats with Day 1 filter', () => {
+        const playerData = [
+            { totalDecks: 16, dailyDecks: { '1': 4, '2': 4, '3': 4, '4': 4 } },
+            { totalDecks: 12, dailyDecks: { '1': 3, '2': 3, '3': 3, '4': 3 } },
+            { totalDecks: 8, dailyDecks: { '1': 2, '2': 2, '3': 2, '4': 2 } }
+        ];
+
+        const stats = calculateDeckCounterStats(playerData, '1', 4);
+
+        expect(stats.totalDecks).toBe(9); // 4 + 3 + 2 (Day 1 only)
+        expect(stats.maxDecks).toBe(12); // 3 players × 4 decks × 1 day
+        expect(stats.percentage).toBe('75.0'); // 9/12 = 75%
+    });
+
+    test('Pure function: calculateDeckCounterStats with Day 2 filter', () => {
+        const playerData = [
+            { totalDecks: 16, dailyDecks: { '1': 4, '2': 4, '3': 4, '4': 4 } },
+            { totalDecks: 12, dailyDecks: { '1': 3, '2': 3, '3': 3, '4': 3 } },
+            { totalDecks: 8, dailyDecks: { '1': 2, '2': 2, '3': 2, '4': 2 } }
+        ];
+
+        const stats = calculateDeckCounterStats(playerData, '2', 4);
+
+        expect(stats.totalDecks).toBe(9); // 4 + 3 + 2 (Day 2 only)
+        expect(stats.maxDecks).toBe(12); // 3 players × 4 decks × 1 day
+        expect(stats.percentage).toBe('75.0'); // 9/12 = 75%
+    });
+
+    test('Pure function: handles empty player data', () => {
+        const stats = calculateDeckCounterStats([], 'all', 4);
+
+        expect(stats.totalDecks).toBe(0);
+        expect(stats.maxDecks).toBe(0);
+        expect(stats.percentage).toBe('0.0');
+    });
+
+    test('Pure function: handles missing daily decks', () => {
+        const playerData = [
+            { totalDecks: 16, dailyDecks: { '1': 4, '2': 4 } } // Missing days 3 and 4
+        ];
+
+        const stats = calculateDeckCounterStats(playerData, '3', 4);
+
+        expect(stats.totalDecks).toBe(0); // Day 3 missing, should be 0
+        expect(stats.maxDecks).toBe(4); // 1 player × 4 decks × 1 day
+        expect(stats.percentage).toBe('0.0');
+    });
+
+    test('REGRESSION: Pure function never allows >100% with correct player count', () => {
+        // This was the bug: using hardcoded 50 players instead of actual count
+        const playerData = [
+            { totalDecks: 16, dailyDecks: { '1': 4, '2': 4, '3': 4, '4': 4 } },
+            { totalDecks: 16, dailyDecks: { '1': 4, '2': 4, '3': 4, '4': 4 } }
+        ];
+
+        const stats = calculateDeckCounterStats(playerData, '2', 4);
+
+        // 2 players × 4 decks = 8 max (not hardcoded 50 × 4 = 200)
+        expect(stats.maxDecks).toBe(8);
+        expect(stats.totalDecks).toBe(8);
+        expect(parseFloat(stats.percentage)).toBeLessThanOrEqual(100);
     });
 
     test('REGRESSION: percentage calculation should never exceed 100% with correct logic', () => {
