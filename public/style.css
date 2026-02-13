@@ -481,16 +481,19 @@ h2 {
     text-align: center;
 }
 
-/* Points column (6th column - last) */
+/* Points column (6th column - last) - VERY VISIBLE */
 .history-table th:nth-child(6),
 .history-table td:nth-child(6) {
-    width: 80px !important;
-    min-width: 80px !important;
-    max-width: 80px !important;
+    width: 100px !important;
+    min-width: 100px !important;
+    max-width: 100px !important;
     text-align: center !important;
-    font-weight: 600;
+    font-weight: 700 !important;
     display: table-cell !important;
     visibility: visible !important;
+    background-color: #ffeb3b !important; /* Bright yellow */
+    color: #000 !important;
+    border: 2px solid red !important;
 }
 
 .history-table th {
