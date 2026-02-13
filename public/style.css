@@ -437,10 +437,12 @@ h2 {
 
 .history-table-container {
     overflow-x: auto;
+    overflow-y: visible;
     background: var(--card-bg);
     border-radius: 12px;
     border: 1px solid var(--border-color);
     padding: 1rem;
+    width: 100%;
 }
 
 .history-table {
@@ -482,10 +484,13 @@ h2 {
 /* Points column (6th column - last) */
 .history-table th:nth-child(6),
 .history-table td:nth-child(6) {
-    width: 80px;
-    min-width: 80px;
-    text-align: center;
+    width: 80px !important;
+    min-width: 80px !important;
+    max-width: 80px !important;
+    text-align: center !important;
     font-weight: 600;
+    display: table-cell !important;
+    visibility: visible !important;
 }
 
 .history-table th {
