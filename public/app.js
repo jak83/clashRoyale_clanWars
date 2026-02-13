@@ -803,10 +803,10 @@ function createDayFilters(days, table) {
     // Check which days have data
     const daysWithData = checkDaysWithData(table);
 
-    // "All Days" button
+    // "Show All" button
     const allBtn = document.createElement('button');
     allBtn.className = 'day-filter-btn';
-    allBtn.textContent = 'All Days';
+    allBtn.textContent = 'Show All';
     allBtn.dataset.day = 'all';
     allBtn.addEventListener('click', () => filterByDay('all', table, allBtn));
     filterContainer.appendChild(allBtn);
@@ -917,8 +917,16 @@ function filterByDay(selectedDay, table, activeBtn, silent = false) {
 
     // Show/hide columns
     if (selectedDay === 'all') {
-        // Show all columns
-        headerCells.forEach(th => th.style.display = '');
+        // Show all columns and restore original headers
+        headerCells.forEach(th => {
+            th.style.display = '';
+            // Restore original day header text if it was changed
+            if (th.dataset.originalHeader) {
+                const sortArrow = th.querySelector('.sort-arrow');
+                const timestamp = th.querySelector('.timestamp-small');
+                th.querySelector('.sort-header').childNodes[0].textContent = th.dataset.originalHeader + ' ';
+            }
+        });
         table.querySelectorAll('tbody td').forEach(td => td.style.display = '');
     } else {
         // Show only player name + selected day + points
@@ -929,7 +937,17 @@ function filterByDay(selectedDay, table, activeBtn, silent = false) {
                 th.style.display = ''; // Always show points column
             } else {
                 const dayMatch = th.textContent.match(/Day (\d+)/);
-                th.style.display = (dayMatch && dayMatch[1] === selectedDay.toString()) ? '' : 'none';
+                if (dayMatch && dayMatch[1] === selectedDay.toString()) {
+                    th.style.display = '';
+                    // Store original header text and change to "Decks"
+                    if (!th.dataset.originalHeader) {
+                        th.dataset.originalHeader = dayMatch[0];
+                    }
+                    const sortArrow = th.querySelector('.sort-arrow');
+                    th.querySelector('.sort-header').childNodes[0].textContent = 'Decks ';
+                } else {
+                    th.style.display = 'none';
+                }
             }
         });
 
