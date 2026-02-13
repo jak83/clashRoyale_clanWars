@@ -1,7 +1,8 @@
 *** Settings ***
 Documentation     Browser-based E2E tests for Clash Wars Tracker UI
 Library           SeleniumLibrary
-Suite Setup       Setup Browser
+Library           RequestsLibrary
+Suite Setup       Setup Browser With Demo Data
 Suite Teardown    Close All Browsers
 
 *** Variables ***
@@ -137,9 +138,14 @@ Footer Contains Support Link
     Element Should Be Visible    css:[data-testid="support-paypal-link"]
 
 *** Keywords ***
-Setup Browser
-    [Documentation]    Initialize browser with ChromeDriver auto-management
-    # webdriver-manager will auto-download and manage ChromeDriver
+Setup Browser With Demo Data
+    [Documentation]    Initialize browser and load demo data for consistent testing
+    # Load demo data FIRST before opening browser
+    Create Session    localhost    ${BASE_URL}
+    ${response}=    POST On Session    localhost    /api/demo/load
+    Log    Demo data loaded: ${response.status_code}
+
+    # Then open browser
     ${chrome_options}=    Evaluate    sys.modules['selenium.webdriver'].ChromeOptions()    sys, selenium.webdriver
     Call Method    ${chrome_options}    add_argument    --disable-gpu
     Call Method    ${chrome_options}    add_argument    --no-sandbox
