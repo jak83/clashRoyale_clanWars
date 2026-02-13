@@ -273,30 +273,39 @@ function renderWarStats(currentRace, raceLog) {
         const participants = ourClan.participants;
         const sortedByFame = [...participants].sort((a, b) => (b.fame || 0) - (a.fame || 0));
 
+        // Calculate totals for header
+        const totalFame = participants.reduce((sum, p) => sum + (p.fame || 0), 0);
+        const totalDecksUsed = participants.reduce((sum, p) => sum + (p.decksUsed || 0), 0);
+        const totalDecksToday = participants.reduce((sum, p) => sum + (p.decksUsedToday || 0), 0);
+        const totalBoatAttacks = participants.reduce((sum, p) => sum + (p.boatAttacks || 0), 0);
+
         playerSection.innerHTML += `
             <div class="player-stats-table">
-                <table class="stats-table">
+                <table class="stats-table war-performance-table">
                     <thead>
                         <tr>
-                            <th>Rank</th>
-                            <th>Player</th>
-                            <th>Fame</th>
-                            <th>Total Decks</th>
-                            <th>Today</th>
+                            <th style="width: 50px;">#</th>
+                            <th>Participants: ${participants.length}</th>
+                            <th class="stat-column" title="Total Decks">${totalDecksUsed} 👑</th>
+                            <th class="stat-column" title="Decks Today">${totalDecksToday} 👑</th>
+                            <th class="stat-column" title="Boat Attacks">${totalBoatAttacks} 🛡️</th>
+                            <th class="stat-column fame-column" title="Total Fame">${totalFame.toLocaleString()} 🏅</th>
                         </tr>
                     </thead>
                     <tbody>
                         ${sortedByFame.map((player, index) => {
                             const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
-                            const totalDecks = player.decksUsed || 0;
-                            const todayDecks = player.decksUsedToday || 0;
                             return `
                                 <tr>
-                                    <td class="rank-cell">${medal} ${index + 1}</td>
-                                    <td class="player-name-cell">${player.name}</td>
-                                    <td class="fame-cell">${(player.fame || 0).toLocaleString()}</td>
-                                    <td class="center-cell">${totalDecks}</td>
-                                    <td class="center-cell">${todayDecks}</td>
+                                    <td class="rank-cell">${index + 1}</td>
+                                    <td class="player-name-cell">
+                                        <div style="font-weight: 600;">${medal} ${player.name}</div>
+                                        <div style="font-size: 0.75rem; color: var(--text-secondary);">Member</div>
+                                    </td>
+                                    <td class="stat-column">${player.decksUsed || 0} 👑</td>
+                                    <td class="stat-column">${player.decksUsedToday || 0} 👑</td>
+                                    <td class="stat-column">${player.boatAttacks || 0} 🛡️</td>
+                                    <td class="stat-column fame-column">${(player.fame || 0).toLocaleString()} 🏅</td>
                                 </tr>
                             `;
                         }).join('')}
