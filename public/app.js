@@ -464,7 +464,7 @@ function renderHistory(history, currentMemberTags = []) {
 
     // Calculate total decks played for deck counter
     let totalDecksPlayed = 0;
-    const maxDecksPerDay = 50 * 4; // 50 players × 4 decks
+    const maxDecksPerDay = playerArray.length * 4; // Actual number of players × 4 decks
 
     playerArray.forEach(p => {
         const tr = document.createElement('tr');
@@ -999,13 +999,15 @@ function filterByDay(selectedDay, table, activeBtn, silent = false) {
     // Update deck counter based on filtered days
     const deckCounter = document.getElementById('deck-counter');
     if (deckCounter) {
-        const maxDecksPerDay = parseInt(table.dataset.maxDecksPerDay) || 200;
         let totalDecksForFilter = 0;
+        let visiblePlayerCount = 0;
         let daysCount = 1;
 
         if (selectedDay === 'all') {
-            // Show total across all days
+            // Show total across all days (only count visible rows)
             table.querySelectorAll('tbody tr').forEach(row => {
+                if (row.style.display === 'none') return; // Skip hidden rows
+                visiblePlayerCount++;
                 totalDecksForFilter += parseInt(row.dataset.totalDecks) || 0;
             });
             // Count number of day columns
@@ -1014,8 +1016,10 @@ function filterByDay(selectedDay, table, activeBtn, silent = false) {
             );
             daysCount = dayCols.length;
         } else {
-            // Show only selected day's decks
+            // Show only selected day's decks (only count visible rows)
             table.querySelectorAll('tbody tr').forEach(row => {
+                if (row.style.display === 'none') return; // Skip hidden rows
+                visiblePlayerCount++;
                 const dailyDecksData = row.dataset.dailyDecks;
                 if (dailyDecksData) {
                     try {
@@ -1029,7 +1033,7 @@ function filterByDay(selectedDay, table, activeBtn, silent = false) {
             daysCount = 1;
         }
 
-        const maxDecks = maxDecksPerDay * daysCount;
+        const maxDecks = visiblePlayerCount * 4 * daysCount;
         const percentage = maxDecks > 0 ? ((totalDecksForFilter / maxDecks) * 100).toFixed(1) : 0;
         deckCounter.innerHTML = `<span style="color: var(--accent-green);">${totalDecksForFilter}</span> / ${maxDecks} decks played (${percentage}%)`;
     }
