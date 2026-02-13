@@ -808,6 +808,7 @@ function createDayFilters(days, table) {
     allBtn.className = 'day-filter-btn';
     allBtn.textContent = 'Show All';
     allBtn.dataset.day = 'all';
+    allBtn.dataset.testid = 'filter-show-all';
     allBtn.addEventListener('click', () => filterByDay('all', table, allBtn));
     filterContainer.appendChild(allBtn);
 
@@ -817,6 +818,7 @@ function createDayFilters(days, table) {
         btn.className = 'day-filter-btn';
         btn.textContent = `Day ${day}`;
         btn.dataset.day = day;
+        btn.dataset.testid = `filter-day-${day}`;
 
         // Gray out if no data
         const dayStr = String(day).trim();
@@ -879,17 +881,27 @@ function filterByDay(selectedDay, table, activeBtn, silent = false) {
         updatePodium(history, filteredDays);
     }
 
+    // Get all column indices (0 = player name, 1+ = days)
+    // Do this BEFORE checking if day exists, and use original headers
+    const headerCells = table.querySelectorAll('thead th');
+    const dayColumns = [];
+
+    headerCells.forEach((th, index) => {
+        if (index === 0) return; // Skip player name column
+
+        // FIX: Use originalHeader if it exists (header was changed to "Decks")
+        const headerText = th.dataset.originalHeader || th.textContent;
+        const dayMatch = headerText.match(/Day (\d+)/);
+
+        if (dayMatch) {
+            dayColumns.push({ index, day: dayMatch[1] });
+        }
+    });
+
     // Check if selected day has data
     const container = document.getElementById('history-container');
     if (selectedDay !== 'all') {
-        const headerCells = table.querySelectorAll('thead th');
-        let dayExists = false;
-        headerCells.forEach((th) => {
-            const dayMatch = th.textContent.match(/Day (\d+)/);
-            if (dayMatch && dayMatch[1] === String(selectedDay)) {
-                dayExists = true;
-            }
-        });
+        let dayExists = dayColumns.some(col => col.day === String(selectedDay));
 
         if (!dayExists) {
             container.innerHTML = `<div class="training-message" style="text-align: center; padding: 2rem; font-size: 1.2rem;">WAR DAY ${selectedDay} has not yet started</div>`;
@@ -902,18 +914,6 @@ function filterByDay(selectedDay, table, activeBtn, silent = false) {
         container.innerHTML = '';
         container.appendChild(table);
     }
-
-    // Get all column indices (0 = player name, 1+ = days)
-    const headerCells = table.querySelectorAll('thead th');
-    const dayColumns = [];
-
-    headerCells.forEach((th, index) => {
-        if (index === 0) return; // Skip player name column
-        const dayMatch = th.textContent.match(/Day (\d+)/);
-        if (dayMatch) {
-            dayColumns.push({ index, day: dayMatch[1] });
-        }
-    });
 
     // Show/hide columns
     if (selectedDay === 'all') {
@@ -936,7 +936,10 @@ function filterByDay(selectedDay, table, activeBtn, silent = false) {
             } else if (th.classList.contains('points-header') || th.textContent.includes('Points')) {
                 th.style.display = ''; // Always show points column
             } else {
-                const dayMatch = th.textContent.match(/Day (\d+)/);
+                // FIX: Use originalHeader if it exists, otherwise use current text
+                const headerText = th.dataset.originalHeader || th.textContent;
+                const dayMatch = headerText.match(/Day (\d+)/);
+
                 if (dayMatch && dayMatch[1] === selectedDay.toString()) {
                     th.style.display = '';
                     // Store original header text and change to "Decks"
