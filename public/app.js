@@ -179,7 +179,7 @@ function renderWarStats(currentRace, raceLog) {
     if (currentRace.periodType === 'training') {
         currentSection.innerHTML += '<div class="training-message">Training Day - War has not started yet</div>';
     } else if (ourClan) {
-        const sortedStandings = [...currentStandings].sort((a, b) => b.fame - a.fame);
+        const sortedStandings = [...currentStandings].sort((a, b) => (b.periodPoints || 0) - (a.periodPoints || 0));
         const ourRank = sortedStandings.findIndex(c => c.tag === clanTag) + 1;
 
         const ourMedal = ourRank === 1 ? '🥇' : ourRank === 2 ? '🥈' : ourRank === 3 ? '🥉' : '';
@@ -202,7 +202,7 @@ function renderWarStats(currentRace, raceLog) {
                         <div class="standing-row ${isUs ? 'standing-us' : ''}">
                             <span class="standing-rank">${medal} ${index + 1}</span>
                             <span class="standing-name">${clan.name}</span>
-                            <span class="standing-fame">${clan.fame.toLocaleString()}</span>
+                            <span class="standing-fame">${(clan.periodPoints || 0).toLocaleString()}</span>
                         </div>
                     `;
                 }).join('')}
