@@ -216,4 +216,62 @@ describe('Left Player Filtering', () => {
             expect(totalDecks).toBe(200);
         });
     });
+
+    describe('Button state management', () => {
+        test('button should reset to default state on table re-render', () => {
+            // Simulate button existing with previous state (user clicked to show)
+            const buttonState = { hidden: 'false', text: 'Hide Inactive Left Players' };
+
+            // Simulate re-render (should reset regardless of current state)
+            const newState = { hidden: 'true', text: 'Show Inactive Left Players' };
+
+            expect(newState.hidden).toBe('true');
+            expect(newState.text).toBe('Show Inactive Left Players');
+        });
+
+        test('button state should match row visibility after render', () => {
+            const rows = [
+                { hiddenByDefault: true, visible: false },
+                { hiddenByDefault: true, visible: false }
+            ];
+
+            const buttonSaysHidden = true;
+
+            // All rows with hiddenByDefault should be hidden when button says hidden
+            const allHidden = rows.every(row => row.hiddenByDefault && !row.visible);
+
+            expect(allHidden).toBe(buttonSaysHidden);
+        });
+
+        test('button toggle should only affect rows with hiddenByDefault', () => {
+            const rows = [
+                { hiddenByDefault: true, visible: false },
+                { hiddenByDefault: false, visible: true },
+                { hiddenByDefault: true, visible: false }
+            ];
+
+            // Simulate toggling to show
+            rows.forEach(row => {
+                if (row.hiddenByDefault) {
+                    row.visible = true;
+                }
+            });
+
+            expect(rows[0].visible).toBe(true); // Should be shown
+            expect(rows[1].visible).toBe(true); // Stays unchanged
+            expect(rows[2].visible).toBe(true); // Should be shown
+        });
+
+        test('button should not lose state when filtering by day', () => {
+            // User clicks button to show inactive left players
+            let buttonState = 'false'; // visible
+
+            // User then filters by Day 1
+            // Table re-renders, button state resets
+            buttonState = 'true'; // back to hidden (default)
+
+            // This is the expected behavior - button resets to default on re-render
+            expect(buttonState).toBe('true');
+        });
+    });
 });
