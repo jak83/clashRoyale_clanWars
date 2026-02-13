@@ -152,6 +152,10 @@ app.post('/api/demo/load', (req, res) => {
     try {
         const days = parseInt(req.body.days) || 4;
         const demoData = demoManager.generateDemoData(days);
+
+        // CRITICAL: Save demo data to history file so /api/race/history returns it
+        historyManager.saveHistory(demoData);
+
         res.json({ message: 'Demo data loaded', history: demoData });
     } catch (error) {
         console.error("Demo load failed:", error);
