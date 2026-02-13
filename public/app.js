@@ -57,7 +57,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const toggleLeftPlayersBtn = document.getElementById('toggle-left-players');
     if (toggleLeftPlayersBtn) {
         toggleLeftPlayersBtn.addEventListener('click', () => {
-            const rows = document.querySelectorAll('tbody tr[data-has-left="true"]');
+            // Only toggle inactive left players (0 decks)
+            const rows = document.querySelectorAll('tbody tr[data-hidden-by-default="true"]');
             const isHidden = toggleLeftPlayersBtn.dataset.hidden === 'true';
 
             rows.forEach(row => {
@@ -67,7 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Flip state
             toggleLeftPlayersBtn.dataset.hidden = !isHidden;
-            toggleLeftPlayersBtn.textContent = !isHidden ? 'Show Left Players' : 'Hide Left Players';
+            toggleLeftPlayersBtn.textContent = !isHidden ? 'Show Inactive Left Players' : 'Hide Inactive Left Players';
 
             // Visual toggle
             if (!isHidden) toggleLeftPlayersBtn.style.backgroundColor = '#666';
@@ -216,6 +217,10 @@ function renderHistory(history, currentMemberTags = []) {
 
     playerArray.sort((a, b) => a.name.localeCompare(b.name));
 
+    // Calculate total decks played for deck counter
+    let totalDecksPlayed = 0;
+    const maxDecksPerDay = 50 * 4; // 50 players × 4 decks
+
     playerArray.forEach(p => {
         const tr = document.createElement('tr');
 
@@ -230,6 +235,7 @@ function renderHistory(history, currentMemberTags = []) {
         let rowHtml = `<td><div class="player-name">${playerNameDisplay}</div><div class="player-tag">${p.tag}</div></td>`;
 
         let isPerfectPlayer = true; // Assume perfect until proven otherwise
+        let totalDecksForPlayer = 0; // Track total decks for this player
 
         days.forEach((day, index) => {
             const currentDayObj = history.days[day];
@@ -248,6 +254,8 @@ function renderHistory(history, currentMemberTags = []) {
             if (dailyDecks < 0) dailyDecks = 0;
             if (dailyDecks < 4) isPerfectPlayer = false; // logic: if any day is less than 4, not perfect
 
+            totalDecksForPlayer += dailyDecks;
+
             // Color Logic
             let valClass = 'val-miss';
             if (dailyDecks >= 4) valClass = 'val-perfect';
@@ -255,14 +263,26 @@ function renderHistory(history, currentMemberTags = []) {
             rowHtml += `<td class="history-val ${valClass}">${dailyDecks} / 4</td>`;
         });
 
+        // Add to total deck count
+        totalDecksPlayed += totalDecksForPlayer;
+
+        // Store total decks on row for filtering
+        tr.dataset.totalDecks = totalDecksForPlayer;
+
         if (isPerfectPlayer) {
             tr.classList.add('history-row-completed');
             tr.classList.add('hidden-row'); // Hidden by default
         }
 
+        // Only hide departed players with 0 decks by default
+        if (hasLeft && totalDecksForPlayer === 0) {
+            tr.style.display = 'none';
+            tr.dataset.hiddenByDefault = 'true';
+        }
+
         if (hasLeft) {
             tr.style.opacity = '0.6';
-            tr.title = 'Player left the clan';
+            tr.title = totalDecksForPlayer > 0 ? 'Player left the clan (played decks)' : 'Player left the clan (no decks played)';
         }
 
         tr.innerHTML = rowHtml;
@@ -285,15 +305,25 @@ function renderHistory(history, currentMemberTags = []) {
 
     const toggleLeftBtn = document.getElementById('toggle-left-players');
     if (toggleLeftBtn && !toggleLeftBtn.dataset.hidden) {
-        // Default: hide left players
+        // Default: hide inactive left players (0 decks)
         toggleLeftBtn.dataset.hidden = 'true';
-        toggleLeftBtn.textContent = 'Show Left Players';
+        toggleLeftBtn.textContent = 'Show Inactive Left Players';
         toggleLeftBtn.style.backgroundColor = '#666';
 
-        // Hide left players by default
-        const leftRows = document.querySelectorAll('tbody tr[data-has-left="true"]');
-        leftRows.forEach(row => row.style.display = 'none');
+        // Already hidden by default in the row creation logic
     }
+
+    // Display deck counter
+    const deckCounter = document.createElement('div');
+    deckCounter.className = 'deck-counter';
+    deckCounter.style.cssText = 'text-align: center; margin: 0.5rem 0; font-size: 1.1rem; font-weight: 600; color: var(--accent-blue);';
+    const totalDaysShown = days.length;
+    const maxDecks = maxDecksPerDay * totalDaysShown;
+    const percentage = maxDecks > 0 ? ((totalDecksPlayed / maxDecks) * 100).toFixed(1) : 0;
+    deckCounter.innerHTML = `<span style="color: var(--accent-green);">${totalDecksPlayed}</span> / ${maxDecks} decks played (${percentage}%)`;
+
+    // Insert deck counter before the table
+    container.insertBefore(deckCounter, table);
 
     // Create day filter buttons - always show 1-4
     createDayFilters(['1', '2', '3', '4'], table);
