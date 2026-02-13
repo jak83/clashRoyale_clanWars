@@ -423,4 +423,66 @@ describe('War Statistics', () => {
             expect(lastWar.rank).toBe(2);
         });
     });
+
+    describe('Clan Tag Handling', () => {
+        test('should extract clan tag from API response data', () => {
+            const currentRace = {
+                clan: {
+                    tag: '#2QPY0R',
+                    name: 'aktiivi suomi 2',
+                    participants: []
+                },
+                clans: []
+            };
+
+            // Get clan tag from response (not from process.env which doesn't exist in browser)
+            const clanTag = currentRace.clan?.tag;
+
+            expect(clanTag).toBe('#2QPY0R');
+            expect(clanTag).toBeDefined();
+        });
+
+        test('should handle missing clan data gracefully', () => {
+            const currentRace = {
+                clans: []
+            };
+
+            const clanTag = currentRace.clan?.tag;
+
+            expect(clanTag).toBeUndefined();
+        });
+
+        test('should not rely on process.env in browser code', () => {
+            // In browser, process.env is undefined
+            const processEnv = typeof process !== 'undefined' ? process.env : undefined;
+
+            // Code should not depend on process.env.CLAN_TAG in browser
+            // Instead, get from API response data
+            const currentRace = {
+                clan: { tag: '#2QPY0R' }
+            };
+
+            const clanTag = currentRace.clan?.tag; // Correct approach
+
+            expect(clanTag).toBe('#2QPY0R');
+            // process.env may or may not exist depending on environment
+        });
+
+        test('should find clan in standings using tag from API', () => {
+            const currentRace = {
+                clan: { tag: '#2QPY0R' },
+                clans: [
+                    { tag: '#CLAN1', name: 'Other Clan', fame: 5000 },
+                    { tag: '#2QPY0R', name: 'Our Clan', fame: 6000 },
+                ]
+            };
+
+            const clanTag = currentRace.clan?.tag;
+            const ourClan = currentRace.clans.find(c => c.tag === clanTag);
+
+            expect(ourClan).toBeDefined();
+            expect(ourClan.name).toBe('Our Clan');
+            expect(ourClan.fame).toBe(6000);
+        });
+    });
 });

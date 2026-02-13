@@ -165,7 +165,8 @@ function renderWarStats(currentRace, raceLog) {
     const container = document.getElementById('war-stats-container');
     container.innerHTML = '';
 
-    const clanTag = process.env.CLAN_TAG || currentRace.clan?.tag;
+    // Get clan tag from current race data
+    const clanTag = currentRace.clan?.tag;
 
     // Current War Section
     const currentSection = document.createElement('div');
