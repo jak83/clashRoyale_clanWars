@@ -3,27 +3,22 @@
  */
 
 describe('War Day Countdown Timer', () => {
-    // Helper function to create a mock Date for testing
-    function createMockDate(utcHour, utcMinute = 0, utcSecond = 0) {
-        const mockDate = new Date();
-        mockDate.setUTCHours(utcHour, utcMinute, utcSecond, 0);
-        return mockDate;
-    }
-
     function calculateTimeUntilReset() {
         const now = new Date();
-        const utcNow = new Date(now.getTime() + now.getTimezoneOffset() * 60000);
 
-        // Next reset is at 10:00 AM UTC
-        const nextReset = new Date(utcNow);
-        nextReset.setUTCHours(10, 0, 0, 0);
+        // Convert to Helsinki time (Europe/Helsinki)
+        const helsinkiTime = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Helsinki' }));
 
-        // If we're past 10:00 AM UTC today, target tomorrow
-        if (utcNow >= nextReset) {
-            nextReset.setUTCDate(nextReset.getUTCDate() + 1);
+        // Next reset is at 10:00 AM Helsinki time
+        const nextReset = new Date(helsinkiTime);
+        nextReset.setHours(10, 0, 0, 0);
+
+        // If we're past 10:00 AM Helsinki time today, target tomorrow
+        if (helsinkiTime >= nextReset) {
+            nextReset.setDate(nextReset.getDate() + 1);
         }
 
-        const diff = nextReset - utcNow;
+        const diff = nextReset - helsinkiTime;
         const hours = Math.floor(diff / (1000 * 60 * 60));
         const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
         const seconds = Math.floor((diff % (1000 * 60)) / 1000);
@@ -37,7 +32,7 @@ describe('War Day Countdown Timer', () => {
     }
 
     describe('Reset time calculation', () => {
-        test('should calculate time until 10:00 AM UTC', () => {
+        test('should calculate time until 10:00 AM Helsinki time', () => {
             const result = calculateTimeUntilReset();
 
             expect(result).toHaveProperty('hours');
@@ -82,7 +77,7 @@ describe('War Day Countdown Timer', () => {
     });
 
     describe('Edge cases', () => {
-        test('should handle time just before midnight UTC', () => {
+        test('should handle time just before midnight', () => {
             // This test ensures we correctly handle day rollover
             const result = calculateTimeUntilReset();
 
@@ -98,7 +93,7 @@ describe('War Day Countdown Timer', () => {
         });
 
         test('should handle different timezones correctly', () => {
-            // The function converts to UTC, so result should be consistent
+            // The function converts to Helsinki time, so result should be consistent
             const result = calculateTimeUntilReset();
 
             expect(result).toBeDefined();
@@ -142,19 +137,19 @@ describe('War Day Countdown Timer', () => {
     });
 
     describe('Reset time constant', () => {
-        test('reset time should be 10:00 AM UTC', () => {
-            const RESET_HOUR_UTC = 10;
-            const RESET_MINUTE_UTC = 0;
+        test('reset time should be 10:00 AM Helsinki time', () => {
+            const RESET_HOUR_HELSINKI = 10;
+            const RESET_MINUTE_HELSINKI = 0;
 
-            expect(RESET_HOUR_UTC).toBe(10);
-            expect(RESET_MINUTE_UTC).toBe(0);
+            expect(RESET_HOUR_HELSINKI).toBe(10);
+            expect(RESET_MINUTE_HELSINKI).toBe(0);
         });
 
-        test('should document that war decks reset at 10:00 AM UTC', () => {
+        test('should document that war decks reset at 10:00 AM Helsinki time', () => {
             // This test documents the Clash Royale game mechanics
-            const DECK_RESET_TIME_UTC = '10:00 AM UTC';
+            const DECK_RESET_TIME_HELSINKI = '10:00 AM Helsinki time';
 
-            expect(DECK_RESET_TIME_UTC).toBe('10:00 AM UTC');
+            expect(DECK_RESET_TIME_HELSINKI).toBe('10:00 AM Helsinki time');
         });
     });
 
@@ -165,14 +160,14 @@ describe('War Day Countdown Timer', () => {
                     <div class="stat-card">
                         <div class="stat-label">Time Until Reset</div>
                         <div class="stat-value" id="countdown-timer">5h 30m 15s</div>
-                        <div class="stat-label">Resets at 10:00 AM UTC</div>
+                        <div class="stat-label">Resets at 10:00 Helsinki time</div>
                     </div>
                 </div>
             `;
 
             expect(statsHtml).toContain('id="countdown-timer"');
             expect(statsHtml).toContain('Time Until Reset');
-            expect(statsHtml).toContain('Resets at 10:00 AM UTC');
+            expect(statsHtml).toContain('Resets at 10:00 Helsinki time');
         });
 
         test('countdown should not display during training day', () => {
@@ -192,8 +187,7 @@ describe('War Day Countdown Timer', () => {
     });
 
     describe('Real-world scenarios', () => {
-        test('scenario: 2 hours until reset', () => {
-            // Simulating 8:00 AM UTC (2 hours before reset)
+        test('scenario: countdown shows time until 10:00 AM Helsinki time', () => {
             const result = calculateTimeUntilReset();
 
             // Should be somewhere between 0 and 24 hours
@@ -202,7 +196,7 @@ describe('War Day Countdown Timer', () => {
         });
 
         test('scenario: just after reset (should show ~24h)', () => {
-            // Right after 10:00 AM UTC, should show time until tomorrow's reset
+            // Right after 10:00 AM Helsinki time, should show time until tomorrow's reset
             const result = calculateTimeUntilReset();
 
             // Should be valid countdown
@@ -211,7 +205,6 @@ describe('War Day Countdown Timer', () => {
         });
 
         test('scenario: 30 minutes before reset', () => {
-            // Simulating 9:30 AM UTC
             const result = calculateTimeUntilReset();
 
             // Should be positive and less than 24 hours
@@ -221,21 +214,27 @@ describe('War Day Countdown Timer', () => {
     });
 
     describe('Timezone handling', () => {
-        test('should convert local time to UTC correctly', () => {
+        test('should convert to Helsinki time correctly', () => {
             const now = new Date();
-            const utcNow = new Date(now.getTime() + now.getTimezoneOffset() * 60000);
+            const helsinkiTime = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Helsinki' }));
 
-            // UTC offset should be applied
-            expect(utcNow).toBeDefined();
+            // Helsinki time should be defined
+            expect(helsinkiTime).toBeDefined();
         });
 
-        test('should always reference 10:00 AM UTC regardless of local timezone', () => {
-            const RESET_HOUR = 10; // UTC hour
+        test('should always reference 10:00 AM Helsinki time', () => {
+            const RESET_HOUR = 10; // Helsinki time hour
             const result = calculateTimeUntilReset();
 
-            // Countdown should be calculated from UTC time
+            // Countdown should be calculated from Helsinki time
             expect(result).toBeDefined();
             expect(RESET_HOUR).toBe(10);
+        });
+
+        test('should use Europe/Helsinki timezone', () => {
+            const TIMEZONE = 'Europe/Helsinki';
+
+            expect(TIMEZONE).toBe('Europe/Helsinki');
         });
     });
 
