@@ -1,3 +1,6 @@
+// Global countdown interval
+let countdownInterval = null;
+
 function updatePlayerCount() {
     const countElement = document.getElementById('player-count');
     if (!countElement) return;
@@ -161,6 +164,32 @@ async function fetchWarStats() {
     }
 }
 
+function calculateTimeUntilReset() {
+    const now = new Date();
+    const utcNow = new Date(now.getTime() + now.getTimezoneOffset() * 60000);
+
+    // Next reset is at 10:00 AM UTC
+    const nextReset = new Date(utcNow);
+    nextReset.setUTCHours(10, 0, 0, 0);
+
+    // If we're past 10:00 AM UTC today, target tomorrow
+    if (utcNow >= nextReset) {
+        nextReset.setUTCDate(nextReset.getUTCDate() + 1);
+    }
+
+    const diff = nextReset - utcNow;
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+    return {
+        hours,
+        minutes,
+        seconds,
+        formatted: `${hours}h ${minutes}m ${seconds}s`
+    };
+}
+
 function renderWarStats(currentRace, raceLog) {
     const container = document.getElementById('war-stats-container');
     container.innerHTML = '';
@@ -185,12 +214,19 @@ function renderWarStats(currentRace, raceLog) {
         const ourMedal = ourRank === 1 ? '🥇' : ourRank === 2 ? '🥈' : ourRank === 3 ? '🥉' : '';
         const medalDisplay = ourMedal || `${ourRank}th`;
 
+        const timeRemaining = calculateTimeUntilReset();
+
         currentSection.innerHTML += `
             <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-label">Current Position</div>
                     <div class="stat-value" style="font-size: 3rem;">${ourMedal || ourRank}</div>
                     <div class="stat-label" style="margin-top: 0.5rem;">${ourMedal ? '' : `${ourRank} / ${currentStandings.length}`}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Time Until Reset</div>
+                    <div class="stat-value" id="countdown-timer" style="font-size: 2rem;">${timeRemaining.formatted}</div>
+                    <div class="stat-label" style="margin-top: 0.5rem;">Resets at 10:00 AM UTC</div>
                 </div>
             </div>
             <h4 style="margin-top: 1.5rem; margin-bottom: 0.5rem;">🏆 Live Standings</h4>
@@ -315,6 +351,23 @@ function renderWarStats(currentRace, raceLog) {
         `;
 
         container.appendChild(playerSection);
+    }
+
+    // Start countdown timer update (only if not training day)
+    if (countdownInterval) clearInterval(countdownInterval);
+
+    if (currentRace.periodType !== 'training') {
+        countdownInterval = setInterval(() => {
+            const timerEl = document.getElementById('countdown-timer');
+            if (timerEl) {
+                const timeRemaining = calculateTimeUntilReset();
+                timerEl.textContent = timeRemaining.formatted;
+            } else {
+                // Element not found, clear interval
+                clearInterval(countdownInterval);
+                countdownInterval = null;
+            }
+        }, 1000);
     }
 }
 
