@@ -508,13 +508,13 @@ function renderHistory(history, currentMemberTags = []) {
     }
 
     const toggleLeftBtn = document.getElementById('toggle-left-players');
-    if (toggleLeftBtn && !toggleLeftBtn.dataset.hidden) {
-        // Default: hide inactive left players (0 decks)
+    if (toggleLeftBtn) {
+        // Always reset to default state: inactive left players are hidden
         toggleLeftBtn.dataset.hidden = 'true';
         toggleLeftBtn.textContent = 'Show Inactive Left Players';
         toggleLeftBtn.style.backgroundColor = '#666';
 
-        // Already hidden by default in the row creation logic
+        // Rows are already hidden by default in the row creation logic
     }
 
     // Display deck counter
