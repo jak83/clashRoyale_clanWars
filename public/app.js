@@ -34,6 +34,27 @@ document.addEventListener('DOMContentLoaded', () => {
     // History Actions
     document.getElementById('refresh-history').addEventListener('click', fetchHistory);
 
+    const toggleLeftPlayersBtn = document.getElementById('toggle-left-players');
+    if (toggleLeftPlayersBtn) {
+        toggleLeftPlayersBtn.addEventListener('click', () => {
+            const rows = document.querySelectorAll('tbody tr[data-has-left="true"]');
+            const isHidden = toggleLeftPlayersBtn.dataset.hidden === 'true';
+
+            rows.forEach(row => {
+                if (isHidden) row.style.display = ''; // Show
+                else row.style.display = 'none'; // Hide
+            });
+
+            // Flip state
+            toggleLeftPlayersBtn.dataset.hidden = !isHidden;
+            toggleLeftPlayersBtn.textContent = !isHidden ? 'Show Left Players' : 'Hide Left Players';
+
+            // Visual toggle
+            if (!isHidden) toggleLeftPlayersBtn.style.backgroundColor = '#666';
+            else toggleLeftPlayersBtn.style.backgroundColor = 'var(--accent-orange)';
+        });
+    }
+
     const toggleHistoryBtn = document.getElementById('toggle-history-completed');
     if (toggleHistoryBtn) {
         toggleHistoryBtn.addEventListener('click', () => {
@@ -62,17 +83,32 @@ async function fetchHistory() {
     container.innerHTML = '<div class="loading-text">Loading history...</div>';
 
     try {
-        const response = await fetch('/api/race/history');
-        if (!response.ok) throw new Error('Failed to fetch history');
-        const history = await response.json();
-        renderHistory(history);
+        // Fetch both history and current clan members
+        const [historyResponse, membersResponse] = await Promise.all([
+            fetch('/api/race/history'),
+            fetch('/api/clan/members')
+        ]);
+
+        if (!historyResponse.ok) throw new Error('Failed to fetch history');
+
+        const history = await historyResponse.json();
+        let currentMemberTags = [];
+
+        if (membersResponse.ok) {
+            const membersData = await membersResponse.json();
+            currentMemberTags = membersData.memberTags || [];
+        } else {
+            console.warn('Failed to fetch current members, will show all participants');
+        }
+
+        renderHistory(history, currentMemberTags);
     } catch (error) {
         console.error("History fetch error:", error);
         container.innerHTML = '<div class="error-text">Could not load history.</div>';
     }
 }
 
-function renderHistory(history) {
+function renderHistory(history, currentMemberTags = []) {
     const container = document.getElementById('history-container');
     container.innerHTML = '';
 
@@ -96,6 +132,8 @@ function renderHistory(history) {
 
     const table = document.createElement('table');
     table.className = 'history-table';
+    // Store member tags on table for filtering
+    table.dataset.currentMembers = JSON.stringify(currentMemberTags);
 
     // Header
     const thead = document.createElement('thead');
@@ -155,12 +193,14 @@ function renderHistory(history) {
     playerArray.forEach(p => {
         const tr = document.createElement('tr');
 
-        // Check if player left (not in the most recent day)
-        const lastDay = days[days.length - 1];
-        const lastDayPlayers = history.days[lastDay].players || history.days[lastDay];
-        const hasLeft = !lastDayPlayers[p.tag];
+        // Check if player left (not in current clan members)
+        const hasLeft = currentMemberTags.length > 0 && !currentMemberTags.includes(p.tag);
 
         const playerNameDisplay = hasLeft ? `${p.name} <span style="color: var(--text-secondary); font-size: 0.75rem;">(left)</span>` : p.name;
+
+        // Store tag for filtering
+        tr.dataset.playerTag = p.tag;
+        tr.dataset.hasLeft = hasLeft;
         let rowHtml = `<td><div class="player-name">${playerNameDisplay}</div><div class="player-tag">${p.tag}</div></td>`;
 
         let isPerfectPlayer = true; // Assume perfect until proven otherwise
@@ -209,12 +249,19 @@ function renderHistory(history) {
     // Add sorting functionality to headers
     addTableSorting(table, history, days);
 
-    // Initialize button state to hidden
+    // Initialize button states
     const toggleBtn = document.getElementById('toggle-history-completed');
     if (toggleBtn && !toggleBtn.dataset.hidden) {
         toggleBtn.dataset.hidden = 'true';
         toggleBtn.textContent = 'Show Completed';
         toggleBtn.style.backgroundColor = '#666';
+    }
+
+    const toggleLeftBtn = document.getElementById('toggle-left-players');
+    if (toggleLeftBtn && !toggleLeftBtn.dataset.hidden) {
+        toggleLeftBtn.dataset.hidden = 'false';
+        toggleLeftBtn.textContent = 'Hide Left Players';
+        toggleLeftBtn.style.backgroundColor = 'var(--accent-orange)';
     }
 
     // Create day filter buttons - always show 1-4

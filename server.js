@@ -110,6 +110,42 @@ app.get('/api/race/history', (req, res) => {
     }
 });
 
+// Get current clan members
+app.get('/api/clan/members', async (req, res) => {
+    const clanTag = process.env.CLAN_TAG;
+    const apiToken = process.env.CLASH_API_TOKEN;
+
+    if (!clanTag || !apiToken) {
+        return res.status(500).json({ error: 'Missing API credentials in .env file' });
+    }
+
+    const formattedTag = clanTag.startsWith('#') ? '%23' + clanTag.slice(1) : clanTag;
+    const url = `https://api.clashroyale.com/v1/clans/${formattedTag}`;
+
+    try {
+        const response = await axios.get(url, {
+            headers: {
+                'Authorization': `Bearer ${apiToken}`,
+                'Accept': 'application/json'
+            }
+        });
+
+        // Return just the member list with tags for easy lookup
+        const memberTags = new Set(response.data.memberList.map(m => m.tag));
+        res.json({
+            memberList: response.data.memberList,
+            memberTags: Array.from(memberTags)
+        });
+    } catch (error) {
+        console.error('Error fetching clan members:', error.message);
+        if (error.response) {
+            res.status(error.response.status).json(error.response.data);
+        } else {
+            res.status(500).json({ error: 'Failed to fetch clan members' });
+        }
+    }
+});
+
 // Demo Endpoint
 const demoManager = require('./demoManager');
 app.post('/api/demo/load', (req, res) => {
