@@ -32,20 +32,20 @@ User Can Switch Between Tabs
     [Documentation]    Verify tab switching works correctly
     Go To    ${BASE_URL}
 
-    # Switch to War Stats tab
+    # Switch to War Stats tab (may take time if API unavailable)
     Click Element    css:[data-testid="tab-war-stats"]
-    Wait Until Element Is Visible    css:[data-testid="view-war-stats"]    timeout=5s
+    Wait Until Element Is Visible    css:[data-testid="view-war-stats"]    timeout=10s
     Element Should Not Have Class    css:[data-testid="tab-daily-history"]    active
     Element Should Have Class    css:[data-testid="tab-war-stats"]    active
 
     # Switch to Last War tab
     Click Element    css:[data-testid="tab-last-war"]
-    Wait Until Element Is Visible    css:[data-testid="view-last-war"]    timeout=5s
+    Wait Until Element Is Visible    css:[data-testid="view-last-war"]    timeout=10s
     Element Should Have Class    css:[data-testid="tab-last-war"]    active
 
     # Switch back to Daily History
     Click Element    css:[data-testid="tab-daily-history"]
-    Wait Until Element Is Visible    css:[data-testid="view-daily-history"]    timeout=5s
+    Wait Until Element Is Visible    css:[data-testid="view-daily-history"]    timeout=10s
     Element Should Have Class    css:[data-testid="tab-daily-history"]    active
 
 Daily History View Displays Control Buttons
