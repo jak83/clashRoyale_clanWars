@@ -1047,12 +1047,18 @@ function filterByDay(selectedDay, table, activeBtn, silent = false) {
             })()
         }));
 
+        // Debug: Log player count and data
+        console.log(`[Deck Counter] Players in table: ${playerData.length}, Filtering by: ${selectedDay}`);
+
         const availableDays = Array.from(table.querySelectorAll('thead th'))
             .filter(th => th.textContent.match(/Day (\d+)/))
             .length;
 
         // Calculate stats (pure function, testable)
         const stats = calculateDeckCounterStats(playerData, selectedDay, availableDays);
+
+        // Debug: Log calculation results
+        console.log(`[Deck Counter] totalDecks: ${stats.totalDecks}, maxDecks: ${stats.maxDecks}, percentage: ${stats.percentage}%`);
 
         // Display result
         deckCounter.innerHTML = `<span style="color: var(--accent-green);">${stats.totalDecks}</span> / ${stats.maxDecks} decks played (${stats.percentage}%)`;
