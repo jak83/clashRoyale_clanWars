@@ -357,15 +357,6 @@ function renderHistory(history, currentMemberTags = []) {
     playerHeader.dataset.sort = 'none';
     headerRow.appendChild(playerHeader);
 
-    // Total Points header with sort
-    const pointsHeader = document.createElement('th');
-    pointsHeader.innerHTML = '<span class="sort-header">Points <span class="sort-arrow"></span></span>';
-    pointsHeader.classList.add('sortable', 'history-val');
-    pointsHeader.dataset.column = 'points';
-    pointsHeader.dataset.sort = 'none';
-    pointsHeader.title = 'Total points earned';
-    headerRow.appendChild(pointsHeader);
-
     // Day headers with sort
     days.forEach(day => {
         const dayObj = history.days[day];
@@ -383,6 +374,15 @@ function renderHistory(history, currentMemberTags = []) {
         dayHeader.dataset.dayIndex = days.indexOf(day);
         headerRow.appendChild(dayHeader);
     });
+
+    // Total Points header with sort (rightmost column)
+    const pointsHeader = document.createElement('th');
+    pointsHeader.innerHTML = '<span class="sort-header">Points <span class="sort-arrow"></span></span>';
+    pointsHeader.classList.add('sortable', 'history-val');
+    pointsHeader.dataset.column = 'points';
+    pointsHeader.dataset.sort = 'none';
+    pointsHeader.title = 'Total points earned';
+    headerRow.appendChild(pointsHeader);
 
     thead.appendChild(headerRow);
     table.appendChild(thead);
@@ -458,16 +458,16 @@ function renderHistory(history, currentMemberTags = []) {
             rowHtml += `<td class="history-val ${valClass}">${dailyDecks} / 4</td>`;
         });
 
+        // Add points column as rightmost column
+        const pointsDisplay = totalPointsForPlayer > 0 ? totalPointsForPlayer.toLocaleString() : '-';
+        rowHtml += `<td class="history-val points-cell">${pointsDisplay}</td>`;
+
         // Add to total deck count
         totalDecksPlayed += totalDecksForPlayer;
 
         // Store total decks and points on row for filtering/sorting
         tr.dataset.totalDecks = totalDecksForPlayer;
         tr.dataset.totalPoints = totalPointsForPlayer;
-
-        // Add points column after player name
-        const pointsDisplay = totalPointsForPlayer > 0 ? totalPointsForPlayer.toLocaleString() : '-';
-        rowHtml = rowHtml.replace('</td>', `</td><td class="history-val points-cell">${pointsDisplay}</td>`);
 
         if (isPerfectPlayer) {
             tr.classList.add('history-row-completed');
