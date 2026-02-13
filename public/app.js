@@ -765,9 +765,21 @@ function sortTable(table, column, direction, dayIndex, history, days) {
                     : bValue - aValue;
             }
         } else if (column === 'points') {
-            // Sort by total points
-            aValue = parseInt(a.dataset.totalPoints) || 0;
-            bValue = parseInt(b.dataset.totalPoints) || 0;
+            // Sort by currently displayed points (respects day filter)
+            const aPointsCell = a.querySelector('.points-cell');
+            const bPointsCell = b.querySelector('.points-cell');
+
+            if (aPointsCell && bPointsCell) {
+                const aText = aPointsCell.textContent.trim();
+                const bText = bPointsCell.textContent.trim();
+
+                // Handle "-" as 0
+                aValue = aText === '-' ? 0 : parseInt(aText.replace(/,/g, '')) || 0;
+                bValue = bText === '-' ? 0 : parseInt(bText.replace(/,/g, '')) || 0;
+            } else {
+                aValue = 0;
+                bValue = 0;
+            }
 
             return direction === 'asc'
                 ? aValue - bValue
