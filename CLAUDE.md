@@ -110,6 +110,60 @@ Copy `.env.example` to `.env` and configure:
 - `PORT` - Server port (default: 3000)
 - `HISTORY_PATH` - Optional. Directory path for storing war history snapshots (default: project root). Can be set to a Google Drive synced folder for cloud backup.
 
+## History Data Backup
+
+**Automatic Backups (Production Server):**
+
+The project includes automated backup scripts to protect your war history data:
+
+```bash
+# One-time setup (on Oracle Cloud server)
+cd ~/clashApi
+chmod +x setup_backup.sh
+./setup_backup.sh
+```
+
+This sets up:
+- Daily backups at 2:00 AM to `~/clash-history-backups/`
+- Compressed archives with timestamps: `clash-history-YYYYMMDD_HHMMSS.tar.gz`
+- Automatic cleanup: keeps last 30 days of backups
+- Logs written to `~/clash-backup.log`
+
+**Manual Backup:**
+```bash
+# On server
+./backup_history.sh
+
+# On Windows (local)
+backup_history.bat
+```
+
+**Restore from Backup:**
+```bash
+# Extract backup to temporary location
+tar -xzf ~/clash-history-backups/clash-history-20260213_020000.tar.gz -C /tmp
+
+# Copy to project directory
+cp -r /tmp/ongoing ~/clashApi/
+cp -r /tmp/history ~/clashApi/
+```
+
+**Backup Locations:**
+- Production: `~/clash-history-backups/` (Oracle Cloud server)
+- Local dev: `%USERPROFILE%\clash-history-backups\` (Windows)
+
+**View Backup Status:**
+```bash
+# List backups
+ls -lh ~/clash-history-backups/
+
+# View backup logs
+tail -f ~/clash-backup.log
+
+# Check cron schedule
+crontab -l | grep backup
+```
+
 ## Architecture
 
 ### Backend (`server.js`)

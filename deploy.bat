@@ -87,7 +87,14 @@ echo.
 echo All tests passed! Proceeding with deployment...
 echo.
 
-echo [4/6] Pushing to GitHub...
+echo [4/7] Creating backup on production server...
+ssh -i "C:\Users\JaniAhlgren\.ssh\oracle-vm.key" ubuntu@129.151.219.17 "cd clashApi && ./backup_history.sh"
+if errorlevel 1 (
+    echo WARNING: Backup failed, but continuing deployment...
+)
+echo.
+
+echo [5/7] Pushing to GitHub...
 git push origin main
 if errorlevel 1 (
     echo ERROR: Git push failed!
@@ -96,7 +103,7 @@ if errorlevel 1 (
 )
 echo.
 
-echo [5/6] Deploying to Oracle Cloud server...
+echo [6/7] Deploying to Oracle Cloud server...
 ssh -i "C:\Users\JaniAhlgren\.ssh\oracle-vm.key" ubuntu@129.151.219.17 "cd clashApi && git pull && npm install && pm2 restart clash-wars"
 if errorlevel 1 (
     echo ERROR: Deployment failed!
@@ -105,7 +112,7 @@ if errorlevel 1 (
 )
 echo.
 
-echo [6/6] Checking server status...
+echo [7/7] Checking server status...
 ssh -i "C:\Users\JaniAhlgren\.ssh\oracle-vm.key" ubuntu@129.151.219.17 "pm2 list"
 echo.
 
