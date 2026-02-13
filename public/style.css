@@ -161,7 +161,11 @@ h2 {
 
 .player-name {
     font-weight: 600;
-    font-size: 1.1rem;
+    font-size: 0.95rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 110px;
 }
 
 .player-tag {
@@ -447,9 +451,32 @@ h2 {
 
 .history-table th,
 .history-table td {
-    padding: 1rem;
+    padding: 0.5rem;
     text-align: left;
     border-bottom: 1px solid var(--border-color);
+}
+
+/* Column widths for desktop */
+.history-table th:first-child,
+.history-table td:first-child {
+    width: 120px;
+    max-width: 120px;
+}
+
+/* Day columns */
+.history-table th:not(:first-child):not(:last-child),
+.history-table td:not(:first-child):not(:last-child) {
+    width: 80px;
+    min-width: 80px;
+    text-align: center;
+}
+
+/* Points column (last) */
+.history-table th:last-child,
+.history-table td:last-child {
+    width: 90px;
+    min-width: 90px;
+    text-align: center;
 }
 
 .history-table th {
