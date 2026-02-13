@@ -289,7 +289,7 @@ function renderWarStats(currentRace, raceLog) {
                             <th class="stat-column" title="Total Decks">${totalDecksUsed} 👑</th>
                             <th class="stat-column" title="Decks Today">${totalDecksToday} 👑</th>
                             <th class="stat-column" title="Boat Attacks">${totalBoatAttacks} 🛡️</th>
-                            <th class="stat-column fame-column" title="Total Fame">${totalFame.toLocaleString()} 🏅</th>
+                            <th class="stat-column fame-column" title="Total Points">${totalFame.toLocaleString()} 🏅</th>
                         </tr>
                     </thead>
                     <tbody>
