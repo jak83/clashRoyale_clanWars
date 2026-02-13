@@ -1,3 +1,23 @@
+function updatePlayerCount() {
+    const countElement = document.getElementById('player-count');
+    if (!countElement) return;
+
+    const table = document.querySelector('.history-table tbody');
+    if (!table) {
+        countElement.textContent = '';
+        return;
+    }
+
+    const allRows = table.querySelectorAll('tr');
+    const visibleRows = Array.from(allRows).filter(row => {
+        const displayStyle = window.getComputedStyle(row).display;
+        const hasHiddenClass = row.classList.contains('hidden-row');
+        return displayStyle !== 'none' && !hasHiddenClass;
+    });
+
+    countElement.textContent = `${visibleRows.length} player${visibleRows.length !== 1 ? 's' : ''} shown`;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     // Load history by default
     fetchHistory();
@@ -52,6 +72,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // Visual toggle
             if (!isHidden) toggleLeftPlayersBtn.style.backgroundColor = '#666';
             else toggleLeftPlayersBtn.style.backgroundColor = 'var(--accent-orange)';
+
+            // Update player count
+            updatePlayerCount();
         });
     }
 
@@ -74,6 +97,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // Visual Toggle Style (optional)
             if (!isHidden) toggleHistoryBtn.style.backgroundColor = '#666';
             else toggleHistoryBtn.style.backgroundColor = 'var(--accent-blue)';
+
+            // Update player count
+            updatePlayerCount();
         });
     }
 });
@@ -259,13 +285,21 @@ function renderHistory(history, currentMemberTags = []) {
 
     const toggleLeftBtn = document.getElementById('toggle-left-players');
     if (toggleLeftBtn && !toggleLeftBtn.dataset.hidden) {
-        toggleLeftBtn.dataset.hidden = 'false';
-        toggleLeftBtn.textContent = 'Hide Left Players';
-        toggleLeftBtn.style.backgroundColor = 'var(--accent-orange)';
+        // Default: hide left players
+        toggleLeftBtn.dataset.hidden = 'true';
+        toggleLeftBtn.textContent = 'Show Left Players';
+        toggleLeftBtn.style.backgroundColor = '#666';
+
+        // Hide left players by default
+        const leftRows = document.querySelectorAll('tbody tr[data-has-left="true"]');
+        leftRows.forEach(row => row.style.display = 'none');
     }
 
     // Create day filter buttons - always show 1-4
     createDayFilters(['1', '2', '3', '4'], table);
+
+    // Update player count after rendering
+    updatePlayerCount();
 }
 
 function addTableSorting(table, history, days) {
@@ -491,6 +525,9 @@ function filterByDay(selectedDay, table, activeBtn, silent = false) {
             });
         });
     }
+
+    // Update player count after filtering
+    updatePlayerCount();
 }
 
 
