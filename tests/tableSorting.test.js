@@ -69,6 +69,10 @@ describe('Table Sorting', () => {
 
           return direction === 'asc' ? aValue - bValue : bValue - aValue;
         }
+      } else if (column === 'points') {
+        aValue = parseInt(a.dataset.totalPoints) || 0;
+        bValue = parseInt(b.dataset.totalPoints) || 0;
+        return direction === 'asc' ? aValue - bValue : bValue - aValue;
       }
 
       return 0;
@@ -254,6 +258,116 @@ describe('Table Sorting', () => {
 
       const names = Array.from(table.querySelectorAll('.player-name')).map(n => n.textContent);
       expect(names).toEqual(['Alice']);
+    });
+  });
+
+  describe('Sort by points column', () => {
+    function createTableWithPoints() {
+      document.body.innerHTML = `
+        <table id="test-table">
+          <thead>
+            <tr>
+              <th class="sortable" data-column="player" data-sort="none">
+                <span class="sort-header">Player <span class="sort-arrow"></span></span>
+              </th>
+              <th class="sortable" data-column="day1" data-sort="none" data-day-index="0">
+                <span class="sort-header">Day 1 <span class="sort-arrow"></span></span>
+              </th>
+              <th class="sortable" data-column="points" data-sort="none">
+                <span class="sort-header">Points <span class="sort-arrow"></span></span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr data-total-points="600">
+              <td><div class="player-name">Bob</div></td>
+              <td>4 / 4</td>
+              <td>600</td>
+            </tr>
+            <tr data-total-points="800">
+              <td><div class="player-name">Alice</div></td>
+              <td>4 / 4</td>
+              <td>800</td>
+            </tr>
+            <tr data-total-points="400">
+              <td><div class="player-name">Charlie</div></td>
+              <td>4 / 4</td>
+              <td>400</td>
+            </tr>
+            <tr data-total-points="0">
+              <td><div class="player-name">Dave</div></td>
+              <td>0 / 4</td>
+              <td>-</td>
+            </tr>
+          </tbody>
+        </table>
+      `;
+      return document.getElementById('test-table');
+    }
+
+    test('should sort by points ascending', () => {
+      const table = createTableWithPoints();
+      sortTableByColumn(table, 'points', 'asc', null);
+
+      const rows = table.querySelectorAll('tbody tr');
+      const names = Array.from(rows).map(row =>
+        row.querySelector('.player-name').textContent
+      );
+
+      expect(names).toEqual(['Dave', 'Charlie', 'Bob', 'Alice']);
+    });
+
+    test('should sort by points descending', () => {
+      const table = createTableWithPoints();
+      sortTableByColumn(table, 'points', 'desc', null);
+
+      const rows = table.querySelectorAll('tbody tr');
+      const names = Array.from(rows).map(row =>
+        row.querySelector('.player-name').textContent
+      );
+
+      expect(names).toEqual(['Alice', 'Bob', 'Charlie', 'Dave']);
+    });
+
+    test('should handle players with 0 points', () => {
+      const table = createTableWithPoints();
+      sortTableByColumn(table, 'points', 'asc', null);
+
+      const rows = table.querySelectorAll('tbody tr');
+      const firstPlayer = rows[0].querySelector('.player-name').textContent;
+      const firstPoints = parseInt(rows[0].dataset.totalPoints);
+
+      expect(firstPlayer).toBe('Dave');
+      expect(firstPoints).toBe(0);
+    });
+
+    test('should handle missing totalPoints attribute', () => {
+      document.body.innerHTML = `
+        <table>
+          <tbody>
+            <tr data-total-points="500">
+              <td><div class="player-name">Alice</div></td>
+              <td>500</td>
+            </tr>
+            <tr>
+              <td><div class="player-name">Bob</div></td>
+              <td>-</td>
+            </tr>
+          </tbody>
+        </table>
+      `;
+      const table = document.querySelector('table');
+
+      expect(() => {
+        sortTableByColumn(table, 'points', 'asc', null);
+      }).not.toThrow();
+
+      const rows = table.querySelectorAll('tbody tr');
+      const names = Array.from(rows).map(row =>
+        row.querySelector('.player-name').textContent
+      );
+
+      expect(names).toEqual(['Bob', 'Alice']);
     });
   });
 });

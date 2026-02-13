@@ -609,6 +609,14 @@ function sortTable(table, column, direction, dayIndex, history, days) {
                     ? aValue - bValue
                     : bValue - aValue;
             }
+        } else if (column === 'points') {
+            // Sort by total points
+            aValue = parseInt(a.dataset.totalPoints) || 0;
+            bValue = parseInt(b.dataset.totalPoints) || 0;
+
+            return direction === 'asc'
+                ? aValue - bValue
+                : bValue - aValue;
         }
 
         return 0;
