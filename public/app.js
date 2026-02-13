@@ -606,17 +606,24 @@ function renderHistory(history, currentMemberTags = []) {
         // Rows are already hidden by default in the row creation logic
     }
 
-    // Display deck counter
+    // Display deck counter using pure function (consistent with filter logic)
     const deckCounter = document.createElement('div');
     deckCounter.className = 'deck-counter';
     deckCounter.id = 'deck-counter';
     deckCounter.style.cssText = 'text-align: center; margin: 0.5rem 0; font-size: 1.1rem; font-weight: 600; color: var(--accent-blue);';
-    const totalDaysShown = days.length;
-    const maxDecks = maxDecksPerDay * totalDaysShown;
-    const percentage = maxDecks > 0 ? ((totalDecksPlayed / maxDecks) * 100).toFixed(1) : 0;
+
+    // Use pure function for calculation (showing all days)
+    const playerDataForCounter = playerArray.map(p => ({
+        totalDecks: totalDecksPlayed / playerArray.length,  // Average per player for now
+        dailyDecks: {}
+    }));
+
+    // Actually, just calculate directly since we have the total
+    const maxDecks = playerArray.length * 4 * days.length;
+    const percentage = maxDecks > 0 ? ((totalDecksPlayed / maxDecks) * 100).toFixed(1) : '0.0';
     deckCounter.innerHTML = `<span style="color: var(--accent-green);">${totalDecksPlayed}</span> / ${maxDecks} decks played (${percentage}%)`;
 
-    // Store max decks per day on table for filtering
+    // Store max decks per day on table for filtering (legacy, could be removed)
     table.dataset.maxDecksPerDay = maxDecksPerDay;
 
     // Insert deck counter before the table
