@@ -42,6 +42,8 @@ document.addEventListener('DOMContentLoaded', () => {
             // Load data if needed
             if (btn.dataset.tab === 'history') {
                 fetchHistory();
+            } else if (btn.dataset.tab === 'war-stats') {
+                fetchWarStats();
             } else if (btn.dataset.tab === 'last-war') {
                 // Check if already loaded? or just load again
                 fetchRaceData().then(data => {
@@ -132,6 +134,188 @@ async function fetchHistory() {
     } catch (error) {
         console.error("History fetch error:", error);
         container.innerHTML = '<div class="error-text">Could not load history.</div>';
+    }
+}
+
+async function fetchWarStats() {
+    const container = document.getElementById('war-stats-container');
+    container.innerHTML = '<div class="loading-text">Loading war statistics...</div>';
+
+    try {
+        const [raceResponse, logResponse] = await Promise.all([
+            fetch('/api/race'),
+            fetch('/api/race/log')
+        ]);
+
+        if (!raceResponse.ok || !logResponse.ok) {
+            throw new Error('Failed to fetch war stats');
+        }
+
+        const currentRace = await raceResponse.json();
+        const raceLog = await logResponse.json();
+
+        renderWarStats(currentRace, raceLog);
+    } catch (error) {
+        console.error("War stats fetch error:", error);
+        container.innerHTML = '<div class="error-text">Could not load war statistics.</div>';
+    }
+}
+
+function renderWarStats(currentRace, raceLog) {
+    const container = document.getElementById('war-stats-container');
+    container.innerHTML = '';
+
+    const clanTag = process.env.CLAN_TAG || currentRace.clan?.tag;
+
+    // Current War Section
+    const currentSection = document.createElement('div');
+    currentSection.className = 'war-section';
+    currentSection.innerHTML = '<h3>⚔️ Current War</h3>';
+
+    const currentStandings = currentRace.clans || [];
+    const ourClan = currentStandings.find(c => c.tag === clanTag);
+
+    if (currentRace.periodType === 'training') {
+        currentSection.innerHTML += '<div class="training-message">Training Day - War has not started yet</div>';
+    } else if (ourClan) {
+        const sortedStandings = [...currentStandings].sort((a, b) => b.fame - a.fame);
+        const ourRank = sortedStandings.findIndex(c => c.tag === clanTag) + 1;
+
+        currentSection.innerHTML += `
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Current Rank</div>
+                    <div class="stat-value">${ourRank} / ${currentStandings.length}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Fame (Points)</div>
+                    <div class="stat-value">${ourClan.fame.toLocaleString()}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Repair Points</div>
+                    <div class="stat-value">${(ourClan.repairPoints || 0).toLocaleString()}</div>
+                </div>
+            </div>
+            <h4 style="margin-top: 1.5rem; margin-bottom: 0.5rem;">🏆 Live Standings</h4>
+            <div class="standings-table">
+                ${sortedStandings.map((clan, index) => {
+                    const isUs = clan.tag === clanTag;
+                    const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
+                    return `
+                        <div class="standing-row ${isUs ? 'standing-us' : ''}">
+                            <span class="standing-rank">${medal} ${index + 1}</span>
+                            <span class="standing-name">${clan.name}</span>
+                            <span class="standing-fame">${clan.fame.toLocaleString()}</span>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        `;
+    }
+
+    container.appendChild(currentSection);
+
+    // Last War Section
+    if (raceLog.items && raceLog.items.length > 0) {
+        const lastWar = raceLog.items[0];
+        const lastWarClan = lastWar.standings.find(s => s.clan.tag === clanTag);
+
+        if (lastWarClan) {
+            const lastSection = document.createElement('div');
+            lastSection.className = 'war-section';
+            lastSection.style.marginTop = '2rem';
+            lastSection.innerHTML = '<h3>📜 Last War Results</h3>';
+
+            const result = lastWarClan.rank === 1 ? '🏆 WON' : '❌ LOST';
+            const resultClass = lastWarClan.rank === 1 ? 'result-won' : 'result-lost';
+            const trophyChange = lastWarClan.trophyChange;
+            const trophyClass = trophyChange > 0 ? 'trophy-positive' : trophyChange < 0 ? 'trophy-negative' : '';
+
+            lastSection.innerHTML += `
+                <div class="stats-grid">
+                    <div class="stat-card ${resultClass}">
+                        <div class="stat-label">Result</div>
+                        <div class="stat-value">${result}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Final Rank</div>
+                        <div class="stat-value">${lastWarClan.rank} / ${lastWar.standings.length}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Final Fame</div>
+                        <div class="stat-value">${lastWarClan.clan.fame.toLocaleString()}</div>
+                    </div>
+                    <div class="stat-card ${trophyClass}">
+                        <div class="stat-label">Trophy Change</div>
+                        <div class="stat-value">${trophyChange > 0 ? '+' : ''}${trophyChange}</div>
+                    </div>
+                </div>
+                <h4 style="margin-top: 1.5rem; margin-bottom: 0.5rem;">🏁 Final Standings</h4>
+                <div class="standings-table">
+                    ${lastWar.standings.map((standing, index) => {
+                        const isUs = standing.clan.tag === clanTag;
+                        const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
+                        const tChange = standing.trophyChange;
+                        const trophyColor = tChange > 0 ? 'var(--accent-green)' : tChange < 0 ? 'var(--accent-red)' : '';
+                        return `
+                            <div class="standing-row ${isUs ? 'standing-us' : ''}">
+                                <span class="standing-rank">${medal} ${standing.rank}</span>
+                                <span class="standing-name">${standing.clan.name}</span>
+                                <span class="standing-fame">${standing.clan.fame.toLocaleString()}</span>
+                                <span class="standing-trophy" style="color: ${trophyColor}">${tChange > 0 ? '+' : ''}${tChange}</span>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+
+            container.appendChild(lastSection);
+        }
+    }
+
+    // Player Stats Section
+    if (currentRace.periodType !== 'training' && ourClan && ourClan.participants) {
+        const playerSection = document.createElement('div');
+        playerSection.className = 'war-section';
+        playerSection.style.marginTop = '2rem';
+        playerSection.innerHTML = '<h3>👥 Player Statistics</h3>';
+
+        const participants = ourClan.participants;
+        const sortedByFame = [...participants].sort((a, b) => (b.fame || 0) - (a.fame || 0));
+
+        playerSection.innerHTML += `
+            <div class="player-stats-table">
+                <table class="stats-table">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Player</th>
+                            <th>Fame</th>
+                            <th>Total Decks</th>
+                            <th>Today</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${sortedByFame.map((player, index) => {
+                            const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
+                            const totalDecks = player.decksUsed || 0;
+                            const todayDecks = player.decksUsedToday || 0;
+                            return `
+                                <tr>
+                                    <td class="rank-cell">${medal} ${index + 1}</td>
+                                    <td class="player-name-cell">${player.name}</td>
+                                    <td class="fame-cell">${(player.fame || 0).toLocaleString()}</td>
+                                    <td class="center-cell">${totalDecks}</td>
+                                    <td class="center-cell">${todayDecks}</td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+
+        container.appendChild(playerSection);
     }
 }
 

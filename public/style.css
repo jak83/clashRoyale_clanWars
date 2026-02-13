@@ -586,3 +586,198 @@ h2 {
 .support-btn:active {
     transform: translateY(0);
 }
+
+/* War Stats Styling */
+.war-section {
+    background: var(--card-bg);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    padding: 1.5rem;
+}
+
+.war-section h3 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    font-size: 1.5rem;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.stat-card {
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    border-radius: 8px;
+    padding: 1rem;
+    text-align: center;
+}
+
+.stat-card.result-won {
+    background: rgba(34, 197, 94, 0.1);
+    border-color: rgba(34, 197, 94, 0.3);
+}
+
+.stat-card.result-lost {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.3);
+}
+
+.stat-card.trophy-positive {
+    background: rgba(34, 197, 94, 0.1);
+    border-color: rgba(34, 197, 94, 0.3);
+}
+
+.stat-card.trophy-negative {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.3);
+}
+
+.stat-label {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+}
+
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.standings-table {
+    background: var(--bg-color);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.standing-row {
+    display: grid;
+    grid-template-columns: 60px 1fr auto auto;
+    gap: 1rem;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border-color);
+    align-items: center;
+}
+
+.standing-row:last-child {
+    border-bottom: none;
+}
+
+.standing-row.standing-us {
+    background: rgba(59, 130, 246, 0.15);
+    font-weight: 600;
+}
+
+.standing-rank {
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.standing-name {
+    color: var(--text-primary);
+}
+
+.standing-fame {
+    font-weight: 600;
+    color: var(--accent-blue);
+    text-align: right;
+}
+
+.standing-trophy {
+    font-weight: 600;
+    text-align: right;
+    min-width: 50px;
+}
+
+@media (max-width: 600px) {
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .standing-row {
+        grid-template-columns: 50px 1fr auto;
+        gap: 0.5rem;
+        padding: 0.5rem;
+        font-size: 0.85rem;
+    }
+
+    .standing-trophy {
+        display: none;
+    }
+}
+
+/* Player Stats Table */
+.player-stats-table {
+    overflow-x: auto;
+    background: var(--bg-color);
+    border-radius: 8px;
+}
+
+.stats-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 600px;
+}
+
+.stats-table thead {
+    background: rgba(59, 130, 246, 0.1);
+}
+
+.stats-table th {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    font-weight: 600;
+    color: var(--text-secondary);
+    border-bottom: 2px solid var(--border-color);
+}
+
+.stats-table td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.stats-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.stats-table tbody tr:hover {
+    background: rgba(59, 130, 246, 0.05);
+}
+
+.rank-cell {
+    font-weight: 600;
+    color: var(--text-secondary);
+    width: 80px;
+}
+
+.player-name-cell {
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.fame-cell {
+    font-weight: 700;
+    color: var(--accent-blue);
+    text-align: right;
+}
+
+.center-cell {
+    text-align: center;
+    color: var(--text-secondary);
+}
+
+@media (max-width: 600px) {
+    .stats-table {
+        min-width: 500px;
+        font-size: 0.85rem;
+    }
+
+    .stats-table th,
+    .stats-table td {
+        padding: 0.5rem;
+    }
+}
