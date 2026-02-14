@@ -43,6 +43,28 @@
                     <button id="toggle-left-players" class="action-btn" data-testid="btn-toggle-left-players"
                         style="margin-left: 1rem; background-color: var(--accent-orange);">Hide Left Players</button>
                 </div>
+                <!-- Activity Legend (shows only in last 30 minutes) -->
+                <div id="activity-legend" class="activity-legend" style="display: none;">
+                    <div class="legend-title">Last Battle Time:</div>
+                    <div class="legend-items">
+                        <span class="legend-item">
+                            <span class="activity-indicator status-dot-green"></span>
+                            < 2 min ago
+                        </span>
+                        <span class="legend-item">
+                            <span class="activity-indicator status-dot-blue"></span>
+                            War (< 5 min)
+                        </span>
+                        <span class="legend-item">
+                            <span class="activity-indicator status-dot-yellow"></span>
+                            2-10 min ago
+                        </span>
+                        <span class="legend-item">
+                            <span class="activity-indicator status-dot-gray"></span>
+                            > 10 min ago
+                        </span>
+                    </div>
+                </div>
                 <!-- Player Count -->
                 <div id="player-count" data-testid="player-count"
                     style="text-align: center; margin: 1rem 0; font-size: 1rem; color: var(--text-secondary);">
@@ -56,6 +78,15 @@
                 <div id="history-container" class="history-table-container" data-testid="history-container">
                     <!-- History Table injected here -->
                     <div class="loading-text">Loading history...</div>
+                </div>
+
+                <!-- Developer Testing Section -->
+                <div id="developer-section" class="developer-section">
+                    <h3>🛠️ Developer Testing</h3>
+                    <div id="developer-status" class="developer-status">
+                        <div class="loading-text">Loading developer status...</div>
+                    </div>
+                    <button id="refresh-dev-status" class="action-btn" style="margin-top: 0.5rem;">Refresh Status</button>
                 </div>
             </div>
 

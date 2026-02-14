@@ -147,6 +147,144 @@ app.get('/api/clan/members', async (req, res) => {
     }
 });
 
+// Player Activity Status (for last 30 minutes only)
+app.post('/api/players/activity', async (req, res) => {
+    const apiToken = process.env.CLASH_API_TOKEN;
+    const { playerTags } = req.body;
+
+    if (!apiToken) {
+        return res.status(500).json({ error: 'Missing API credentials' });
+    }
+
+    if (!Array.isArray(playerTags) || playerTags.length === 0) {
+        return res.status(400).json({ error: 'playerTags array required' });
+    }
+
+    try {
+        // Fetch battle history for each player
+        const activityPromises = playerTags.map(async (tag) => {
+            const formattedTag = tag.startsWith('#') ? '%23' + tag.slice(1) : tag;
+            const url = `https://api.clashroyale.com/v1/players/${formattedTag}/battlelog`;
+
+            try {
+                const response = await axios.get(url, {
+                    headers: {
+                        'Authorization': `Bearer ${apiToken}`,
+                        'Accept': 'application/json'
+                    }
+                });
+
+                const battles = response.data;
+                const status = determinePlayerStatus(battles);
+
+                return {
+                    tag,
+                    ...status
+                };
+            } catch (error) {
+                console.error(`Error fetching battles for ${tag}:`, error.message);
+                return {
+                    tag,
+                    status: 'unknown',
+                    lastBattleMinutesAgo: null,
+                    lastBattleType: null
+                };
+            }
+        });
+
+        const results = await Promise.all(activityPromises);
+        res.json({ players: results });
+
+    } catch (error) {
+        console.error('Error fetching player activity:', error.message);
+        res.status(500).json({ error: 'Failed to fetch player activity' });
+    }
+});
+
+/**
+ * Determine player activity status from battle history
+ */
+function determinePlayerStatus(battles) {
+    if (!battles || battles.length === 0) {
+        return {
+            status: 'idle',
+            lastBattleMinutesAgo: null,
+            lastBattleType: null
+        };
+    }
+
+    const latestBattle = battles[0];
+    const battleTime = parseBattleTime(latestBattle.battleTime);
+    const minutesAgo = Math.floor((Date.now() - battleTime) / (1000 * 60));
+    const isWarBattle = latestBattle.type === 'riverRacePvP' ||
+                       latestBattle.type === 'riverRaceDuel' ||
+                       latestBattle.type === 'boatBattle';
+
+    let status;
+    if (minutesAgo < 2) {
+        status = 'active'; // 🟢 Green - Just played
+    } else if (minutesAgo < 5 && isWarBattle) {
+        status = 'war-recent'; // 🔵 Blue - Recent war battle
+    } else if (minutesAgo < 10) {
+        status = 'playing'; // 🟡 Yellow - Recently active
+    } else {
+        status = 'idle'; // ⚪ Gray - Idle
+    }
+
+    return {
+        status,
+        lastBattleMinutesAgo: minutesAgo,
+        lastBattleType: latestBattle.type,
+        isWarBattle
+    };
+}
+
+/**
+ * Parse Clash Royale battle time format: "20260214T194919.000Z"
+ */
+function parseBattleTime(battleTimeStr) {
+    const year = battleTimeStr.substring(0, 4);
+    const month = battleTimeStr.substring(4, 6);
+    const day = battleTimeStr.substring(6, 8);
+    const hour = battleTimeStr.substring(9, 11);
+    const minute = battleTimeStr.substring(11, 13);
+    const second = battleTimeStr.substring(13, 15);
+
+    return new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}Z`);
+}
+
+/**
+ * Check if we're in the last 30 minutes before reset
+ */
+function isInCriticalWindow() {
+    // TESTING MODE: Always return true for testing
+    return true;
+
+    /* PRODUCTION CODE (uncomment when done testing):
+    const now = new Date();
+    const nextReset = new Date(now);
+
+    // Set to 5:00 AM UTC
+    nextReset.setUTCHours(5, 0, 0, 0);
+
+    // If we're past 5 AM today, move to tomorrow
+    if (now.getUTCHours() >= 5) {
+        nextReset.setUTCDate(nextReset.getUTCDate() + 1);
+    }
+
+    // Subtract 4 minutes to match game clock
+    nextReset.setMinutes(nextReset.getMinutes() - 4);
+
+    const minutesUntilReset = Math.floor((nextReset - now) / (1000 * 60));
+    return minutesUntilReset <= 30;
+    */
+}
+
+// Endpoint to check if we're in critical window
+app.get('/api/critical-window', (req, res) => {
+    res.json({ inCriticalWindow: isInCriticalWindow() });
+});
+
 // Demo Endpoint
 const demoManager = require('./demoManager');
 app.post('/api/demo/load', (req, res) => {

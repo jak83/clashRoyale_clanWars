@@ -1,6 +1,201 @@
 // Global countdown interval
 let countdownInterval = null;
 
+// Activity Status Configuration (shared between all sections)
+// Using "Factual Recency" approach - show WHEN, not status
+const ACTIVITY_CONFIG = {
+    active: {
+        emoji: '🟢',
+        label: 'Battle < 2m ago',
+        cssClass: 'status-dot-green',
+        description: 'Battle finished within last 2 minutes'
+    },
+    'war-recent': {
+        emoji: '🔵',
+        label: 'War battle < 5m ago',
+        cssClass: 'status-dot-blue',
+        description: 'War battle finished within last 5 minutes'
+    },
+    playing: {
+        emoji: '🟡',
+        label: 'Battle 2-10m ago',
+        cssClass: 'status-dot-yellow',
+        description: 'Battle finished 2-10 minutes ago'
+    },
+    idle: {
+        emoji: '⚪',
+        label: 'No recent battles',
+        cssClass: 'status-dot-gray',
+        description: 'No battles in last 10 minutes'
+    },
+    unknown: {
+        emoji: '❓',
+        label: 'Unknown',
+        cssClass: 'status-dot-gray',
+        description: 'Battle data unavailable'
+    }
+};
+
+/**
+ * Check if we're in the critical 30-minute window before reset
+ */
+async function checkCriticalWindow() {
+    try {
+        const response = await fetch('/api/critical-window');
+        const data = await response.json();
+        return data.inCriticalWindow;
+    } catch (error) {
+        console.error('Error checking critical window:', error);
+        return false;
+    }
+}
+
+/**
+ * Fetch activity status for multiple players
+ * @param {Array<string>} playerTags - Array of player tags
+ * @returns {Object} Map of tag -> activity status
+ */
+async function fetchPlayerActivity(playerTags) {
+    if (!playerTags || playerTags.length === 0) return {};
+
+    try {
+        const response = await fetch('/api/players/activity', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ playerTags })
+        });
+
+        if (!response.ok) {
+            console.error('Failed to fetch player activity:', response.statusText);
+            return {};
+        }
+
+        const data = await response.json();
+        console.log('Player activity API response:', data);
+
+        // Check if response has players array
+        if (!data || !data.players || !Array.isArray(data.players)) {
+            console.error('Invalid API response - missing players array:', data);
+            return {};
+        }
+
+        // Convert array to map for easy lookup
+        const activityMap = {};
+        data.players.forEach(player => {
+            activityMap[player.tag] = player;
+        });
+
+        return activityMap;
+    } catch (error) {
+        console.error('Error fetching player activity:', error);
+        return {};
+    }
+}
+
+/**
+ * Get activity indicator HTML based on player status
+ * Shows colored dot WITH time evidence
+ * @param {Object} activity - Player activity object
+ * @returns {string} HTML for activity indicator with time
+ */
+function getActivityIndicator(activity) {
+    if (!activity || activity.status === 'unknown') {
+        return '';
+    }
+
+    const config = ACTIVITY_CONFIG[activity.status];
+    if (!config) return '';
+
+    const minutesAgo = activity.lastBattleMinutesAgo;
+    const tooltip = `${config.description}\nLast battle: ${minutesAgo}m ago`;
+
+    // Show dot WITH time evidence (e.g., "🟢 2m")
+    return `<span class="activity-indicator-wrapper">
+        <span class="activity-indicator ${config.cssClass}" title="${tooltip}"></span>
+        <span class="activity-time">${minutesAgo}m</span>
+    </span>`;
+}
+
+/**
+ * Fetch and display developer player status for testing
+ */
+async function fetchDeveloperStatus() {
+    const DEV_PLAYER_TAG = '#8VQY0Y8PC';
+    const container = document.getElementById('developer-status');
+
+    if (!container) return;
+
+    try {
+        // Fetch activity status using shared function
+        const activityMap = await fetchPlayerActivity([DEV_PLAYER_TAG]);
+        const activity = activityMap[DEV_PLAYER_TAG];
+
+        if (!activity) {
+            container.innerHTML = '<div style="color: var(--accent-red);">Failed to fetch developer status</div>';
+            return;
+        }
+
+        // Use shared config
+        const config = ACTIVITY_CONFIG[activity.status] || ACTIVITY_CONFIG.unknown;
+
+        container.innerHTML = `
+            <div class="dev-player-card">
+                <div class="dev-player-info">
+                    <span class="activity-indicator ${config.cssClass}"
+                          style="width: 16px; height: 16px; margin-top: 0;"></span>
+                    <div>
+                        <div style="font-weight: 600; font-size: 1.1rem;">jak ${DEV_PLAYER_TAG}</div>
+                        <div style="font-size: 0.9rem; color: var(--text-secondary);">
+                            ${config.emoji} ${config.label}
+                        </div>
+                    </div>
+                </div>
+                <div class="dev-activity-details">
+                    <div>Last battle: <span class="highlight">${activity.lastBattleMinutesAgo || 'N/A'} min ago</span></div>
+                    <div>Type: <span class="highlight">${activity.isWarBattle ? '⚔️ War' : '🎮 Normal'}</span></div>
+                    <div>Battle: <span class="highlight">${activity.lastBattleType || 'Unknown'}</span></div>
+                    <div style="font-size: 0.75rem; margin-top: 0.25rem; opacity: 0.7;">
+                        Last updated: <span id="dev-last-update">${new Date().toLocaleTimeString()}</span>
+                    </div>
+                    <div style="font-size: 0.75rem; opacity: 0.7;">
+                        Next update: <span id="dev-next-update" class="highlight">--</span>
+                    </div>
+                </div>
+            </div>
+        `;
+
+    } catch (error) {
+        console.error('Error fetching developer status:', error);
+        container.innerHTML = '<div style="color: var(--accent-red);">Error loading status</div>';
+    }
+}
+
+// Track last update time for countdown
+let lastDevUpdate = Date.now();
+
+/**
+ * Update countdown timer showing time until next refresh
+ */
+function updateDevCountdown(intervalSeconds) {
+    const nextUpdateEl = document.getElementById('dev-next-update');
+    const lastUpdateEl = document.getElementById('dev-last-update');
+
+    if (!nextUpdateEl) return;
+
+    const now = Date.now();
+    const elapsed = Math.floor((now - lastDevUpdate) / 1000);
+    const remaining = Math.max(0, intervalSeconds - elapsed);
+
+    if (remaining === 0) {
+        lastDevUpdate = now;
+        if (lastUpdateEl) {
+            lastUpdateEl.textContent = new Date().toLocaleTimeString();
+        }
+    }
+
+    nextUpdateEl.textContent = `${remaining}s`;
+}
+
 /**
  * Pure function to calculate deck counter statistics
  * @param {Array} playerData - Array of {totalDecks, dailyDecks: {1: x, 2: y, ...}}
@@ -143,11 +338,35 @@ document.addEventListener('DOMContentLoaded', () => {
     if (refreshWarBtn) {
         refreshWarBtn.addEventListener('click', () => fetchWarStats(true));
     }
+
+    // Developer Testing Section
+    const refreshDevBtn = document.getElementById('refresh-dev-status');
+    if (refreshDevBtn) {
+        refreshDevBtn.addEventListener('click', () => fetchDeveloperStatus());
+    }
+
+    // Auto-load developer status on page load
+    fetchDeveloperStatus();
+
+    // Auto-refresh developer status every 30 seconds
+    const DEV_REFRESH_INTERVAL = 30; // seconds
+    setInterval(fetchDeveloperStatus, DEV_REFRESH_INTERVAL * 1000);
+
+    // Update countdown timer
+    updateDevCountdown(DEV_REFRESH_INTERVAL);
+    setInterval(() => updateDevCountdown(DEV_REFRESH_INTERVAL), 1000);
 });
 
 async function fetchHistory(force = false) {
     const container = document.getElementById('history-container');
     container.innerHTML = '<div class="loading-text">Loading history...</div>';
+
+    // Show/hide activity legend based on critical window
+    const criticalWindow = await checkCriticalWindow();
+    const legend = document.getElementById('activity-legend');
+    if (legend) {
+        legend.style.display = criticalWindow ? 'flex' : 'none';
+    }
 
     try {
         // Fetch both history and current clan members
@@ -518,7 +737,18 @@ function renderHistory(history, currentMemberTags = []) {
         // Store tag for filtering
         tr.dataset.playerTag = p.tag;
         tr.dataset.hasLeft = hasLeft;
-        let rowHtml = `<td><div class="player-name">${playerNameDisplay}</div><div class="player-tag">${p.tag}</div></td>`;
+        tr.classList.add('player-row');
+
+        // Will add activity indicator and expand button later (after we know if player is incomplete)
+        let rowHtml = `<td class="player-cell">
+            <div class="player-info-row">
+                <div class="player-names">
+                    <div class="player-name">${playerNameDisplay}</div>
+                    <div class="player-tag">${p.tag}</div>
+                </div>
+                <span class="expand-btn" style="display: none;">+</span>
+            </div>
+        </td>`;
 
         let isPerfectPlayer = true; // Assume perfect until proven otherwise
         let totalDecksForPlayer = 0; // Track total decks for this player
@@ -1247,7 +1477,7 @@ function renderLastWarLog(data, clanTag) {
     });
 }
 
-function renderData(data) {
+async function renderData(data) {
     // Live view elements removed - this function is now only used internally
     // All DOM manipulations are skipped if elements don't exist
     const clanNameEl = document.getElementById('clan-name');
@@ -1300,6 +1530,18 @@ function renderData(data) {
     playerList.innerHTML = '';
     completedList.innerHTML = '';
 
+    // Check if we're in the last 30 minutes (critical window)
+    const criticalWindow = await checkCriticalWindow();
+    let playerActivity = {};
+
+    // Fetch activity status for incomplete players if in critical window
+    if (criticalWindow) {
+        const incompletePlayers = participants.filter(p => (p.decksUsedToday || 0) < 4);
+        if (incompletePlayers.length > 0) {
+            playerActivity = await fetchPlayerActivity(incompletePlayers.map(p => p.tag));
+        }
+    }
+
     participants.forEach(player => {
         const decksUsed = player.decksUsedToday || 0;
         const isComplete = decksUsed >= 4;
@@ -1310,10 +1552,17 @@ function renderData(data) {
         const statusClass = isComplete ? 'status-complete' : 'status-incomplete';
         const statusText = `${decksUsed} / 4`;
 
+        // Get activity status for this player
+        const activity = playerActivity[player.tag];
+        const activityIndicator = activity ? getActivityIndicator(activity) : '';
+
         div.innerHTML = `
             <div class="player-info">
-                <span class="player-name">${player.name}</span>
-                <span class="player-tag">${player.tag}</span>
+                ${activityIndicator}
+                <div>
+                    <span class="player-name">${player.name}</span>
+                    <span class="player-tag">${player.tag}</span>
+                </div>
             </div>
             <div class="decks-status ${statusClass}">
                 ${statusText}
@@ -1325,6 +1574,12 @@ function renderData(data) {
     });
 
     incompleteCountLabel.textContent = incompleteCount;
+
+    // Show/hide activity legend based on critical window
+    const legend = document.getElementById('activity-legend');
+    if (legend) {
+        legend.style.display = criticalWindow ? 'flex' : 'none';
+    }
 
     // Default: Show only incomplete. Ensure button shows correct text.
     if (completedList.classList.contains('hidden')) {
