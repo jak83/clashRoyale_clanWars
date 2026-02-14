@@ -542,6 +542,16 @@ document.addEventListener('DOMContentLoaded', () => {
             targetContent.classList.remove('hidden');
             targetContent.classList.add('active');
 
+            // Clear countdowns when switching tabs
+            if (btn.dataset.tab !== 'history' && historyCountdownInterval) {
+                clearInterval(historyCountdownInterval);
+                historyCountdownInterval = null;
+            }
+            if (btn.dataset.tab !== 'war-stats' && countdownInterval) {
+                clearInterval(countdownInterval);
+                countdownInterval = null;
+            }
+
             // Load data if needed
             if (btn.dataset.tab === 'history') {
                 fetchHistory();
@@ -1116,6 +1126,55 @@ async function renderHistory(history, currentMemberTags = []) {
 
     // Update player count after rendering
     updatePlayerCount();
+
+    // Start countdown timer for deck reset
+    startHistoryCountdown();
+}
+
+/**
+ * Start and update countdown timer in history view
+ */
+let historyCountdownInterval = null;
+
+function startHistoryCountdown() {
+    const countdownEl = document.getElementById('history-countdown');
+    if (!countdownEl) return;
+
+    // Clear any existing interval
+    if (historyCountdownInterval) {
+        clearInterval(historyCountdownInterval);
+    }
+
+    // Update immediately
+    updateHistoryCountdown();
+
+    // Update every second
+    historyCountdownInterval = setInterval(updateHistoryCountdown, 1000);
+}
+
+function updateHistoryCountdown() {
+    const countdownEl = document.getElementById('history-countdown');
+    if (!countdownEl) {
+        // Element not found, clear interval
+        if (historyCountdownInterval) {
+            clearInterval(historyCountdownInterval);
+            historyCountdownInterval = null;
+        }
+        return;
+    }
+
+    const timeRemaining = calculateTimeUntilReset();
+    countdownEl.innerHTML = `
+        <div style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.25rem;">
+            ⏰ Time Until Deck Reset
+        </div>
+        <div style="font-size: 1.4rem; font-weight: 700; color: var(--accent-blue);">
+            ${timeRemaining.formatted}
+        </div>
+        <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.25rem;">
+            Resets daily at 10:00 UTC
+        </div>
+    `;
 }
 
 function updatePodium(history, days) {
