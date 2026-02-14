@@ -53,9 +53,9 @@ async function updateRaceData() {
     }
 }
 
-// Initial fetch and start polling every 5 minutes
+// Initial fetch and start polling every 2 minutes
 updateRaceData();
-setInterval(updateRaceData, 5 * 60 * 1000);
+setInterval(updateRaceData, 2 * 60 * 1000);
 
 // API Proxy Endpoint
 app.get('/api/race', async (req, res) => {
@@ -257,10 +257,6 @@ function parseBattleTime(battleTimeStr) {
  * Check if we're in the last 30 minutes before reset
  */
 function isInCriticalWindow() {
-    // TESTING MODE: Always return true for testing
-    return true;
-
-    /* PRODUCTION CODE (uncomment when done testing):
     const now = new Date();
     const nextReset = new Date(now);
 
@@ -277,7 +273,6 @@ function isInCriticalWindow() {
 
     const minutesUntilReset = Math.floor((nextReset - now) / (1000 * 60));
     return minutesUntilReset <= 30;
-    */
 }
 
 // Endpoint to check if we're in critical window

@@ -176,7 +176,7 @@ tail -f ~/clash-backup.log        # Watch backup log
 Express server with automatic background polling and caching:
 
 **Background Polling System:**
-- Polls Clash Royale API every 5 minutes to fetch current race status
+- Polls Clash Royale API every 2 minutes to fetch current race status
 - Stores latest data in memory cache (`latestRaceData`) for instant UI loads
 - Automatically updates local history snapshots via `historyManager`
 
@@ -254,7 +254,7 @@ For detailed deployment instructions, see the comprehensive guide at `G:\My Driv
    - Still requires IP whitelisting solution (RoyaleAPI Proxy)
 
 **NOT Recommended:**
-- **Render Free Tier** - Sleeps after 15 minutes, breaking the 5-minute polling system
+- **Render Free Tier** - Sleeps after 15 minutes, breaking the 2-minute polling system
 
 ### Pre-Deployment Checklist
 
@@ -326,7 +326,7 @@ curl https://YOUR_URL/api/race
 
 # Verify polling in logs
 pm2 logs server
-# Should see: "[time] Polling Clash Royale API..." every 5 minutes
+# Should see: "[time] Polling Clash Royale API..." every 2 minutes
 ```
 
 ### Cost Summary

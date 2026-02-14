@@ -1,6 +1,50 @@
 // Global countdown interval
 let countdownInterval = null;
 
+/**
+ * Reusable Polling Timer Utility
+ * Tracks when the server will poll the API next and provides countdown
+ */
+const PollingTimer = {
+    POLL_INTERVAL_SECONDS: 2 * 60, // 2 minutes in seconds
+    serverStartTime: Date.now(), // Approximate - will sync on first data fetch
+
+    /**
+     * Calculate seconds remaining until next poll
+     * @returns {number} Seconds remaining (0 to POLL_INTERVAL_SECONDS)
+     */
+    getSecondsUntilNextPoll() {
+        const now = Date.now();
+        const elapsed = Math.floor((now - this.serverStartTime) / 1000);
+        const remaining = this.POLL_INTERVAL_SECONDS - (elapsed % this.POLL_INTERVAL_SECONDS);
+        return remaining;
+    },
+
+    /**
+     * Format seconds as MM:SS
+     * @param {number} totalSeconds
+     * @returns {string} Formatted time like "1:30"
+     */
+    formatTime(totalSeconds) {
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+        return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    },
+
+    /**
+     * Update a DOM element with countdown timer
+     * @param {string} elementId - ID of element to update
+     * @param {Function} formatFn - Optional custom formatter (receives seconds)
+     */
+    updateElement(elementId, formatFn = null) {
+        const el = document.getElementById(elementId);
+        if (!el) return;
+
+        const seconds = this.getSecondsUntilNextPoll();
+        el.textContent = formatFn ? formatFn(seconds) : this.formatTime(seconds);
+    }
+};
+
 // Activity Status Configuration (shared between all sections)
 // Using "Factual Recency" approach - show WHEN, not status
 const ACTIVITY_CONFIG = {
@@ -634,13 +678,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // Auto-load developer status on page load
     fetchDeveloperStatus();
 
-    // Auto-refresh developer status every 30 seconds
-    const DEV_REFRESH_INTERVAL = 30; // seconds
-    setInterval(fetchDeveloperStatus, DEV_REFRESH_INTERVAL * 1000);
+    // DISABLED: Auto-refresh uses API quota unnecessarily in production
+    // const DEV_REFRESH_INTERVAL = 30; // seconds
+    // setInterval(fetchDeveloperStatus, DEV_REFRESH_INTERVAL * 1000);
 
-    // Update countdown timer
-    updateDevCountdown(DEV_REFRESH_INTERVAL);
-    setInterval(() => updateDevCountdown(DEV_REFRESH_INTERVAL), 1000);
+    // DISABLED: Countdown timer (no auto-refresh in production)
+    // updateDevCountdown(DEV_REFRESH_INTERVAL);
+    // setInterval(() => updateDevCountdown(DEV_REFRESH_INTERVAL), 1000);
+
+    // Initialize header polling countdown timer
+    PollingTimer.updateElement('next-poll-timer');
+    setInterval(() => PollingTimer.updateElement('next-poll-timer'), 1000);
 });
 
 async function fetchHistory(force = false) {

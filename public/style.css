@@ -45,6 +45,14 @@ h1 {
     margin-bottom: 0.5rem;
 }
 
+.header-subtitle {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-top: 0.25rem;
+    font-weight: 400;
+    opacity: 0.8;
+}
+
 .timestamp-small {
     font-size: 0.65rem;
     color: var(--text-secondary);
@@ -528,8 +536,11 @@ h2 {
 
 /* History View */
 .history-controls {
-    margin-bottom: 1rem;
-    text-align: right;
+    margin-bottom: 1.5rem;
+    display: flex;
+    justify-content: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
 }
 
 .action-btn {
@@ -552,6 +563,7 @@ h2 {
     border-radius: 12px;
     border: 1px solid var(--border-color);
     padding: 1rem;
+    margin-top: 1.5rem;
     width: 100%;
 }
 
@@ -639,11 +651,34 @@ h2 {
     color: var(--accent-blue);
 }
 
+/* Countdown Display */
+.countdown-display {
+    text-align: center;
+    margin: 1.5rem 0;
+    padding: 1rem;
+    background: rgba(59, 130, 246, 0.05);
+    border-radius: 8px;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--accent-blue);
+}
+
 /* Day Filter Buttons */
 .day-filters {
     display: flex;
     gap: 0.5rem;
     flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+}
+
+/* Player Count Display */
+.player-count-display {
+    text-align: center;
+    margin: 1rem 0;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    opacity: 0.8;
 }
 
 .day-filter-btn {
