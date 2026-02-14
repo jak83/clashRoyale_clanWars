@@ -104,6 +104,17 @@ function formatMinutesToHourMin(totalMinutes) {
 }
 
 /**
+ * Format minutes as readable text (e.g., "14h 26m", "0h 05m", "2h 30m")
+ * @param {number} totalMinutes - Total minutes
+ * @returns {string} Formatted time string with units
+ */
+function formatMinutesToReadable(totalMinutes) {
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    return `${hours}h ${minutes.toString().padStart(2, '0')}m`;
+}
+
+/**
  * Get activity indicator HTML based on player status
  * Shows colored dot WITH time evidence
  * @param {Object} activity - Player activity object
@@ -129,6 +140,266 @@ function getActivityIndicator(activity) {
 }
 
 /**
+ * Get just the activity indicator icon (colored dot) without time
+ * Used in expanded details where time is shown separately
+ * @param {Object} activity - Player activity object
+ * @returns {string} HTML for activity indicator icon only
+ */
+function getActivityIndicatorIcon(activity) {
+    if (!activity || activity.status === 'unknown') {
+        return '';
+    }
+
+    const config = ACTIVITY_CONFIG[activity.status];
+    if (!config) return '';
+
+    const tooltip = config.description;
+
+    // Show just the colored dot (no emoji to avoid duplication)
+    return `<span class="activity-indicator ${config.cssClass}"
+                  title="${tooltip}"
+                  style="display: inline-block; width: 12px; height: 12px;"></span>`;
+}
+
+/**
+ * Generate standardized activity details HTML
+ * SINGLE SOURCE OF TRUTH for player activity display
+ * Used in both expandable cards and developer section
+ * @param {Object} activity - Player activity object
+ * @returns {string} HTML for activity details
+ */
+function generateActivityDetailsHTML(activity) {
+    if (!activity) return '';
+
+    const statusIcon = getActivityIndicatorIcon(activity);
+    const timeReadable = formatMinutesToReadable(activity.lastBattleMinutesAgo);
+
+    return `
+        <div class="battle-detail-item">
+            <span class="detail-label">Status:</span>
+            <span class="detail-value">${statusIcon}</span>
+        </div>
+        <div class="battle-detail-item">
+            <span class="detail-label">Last battle:</span>
+            <span class="detail-value">${timeReadable} ago</span>
+        </div>
+        <div class="battle-detail-item">
+            <span class="detail-label">Type:</span>
+            <span class="detail-value">${activity.isWarBattle ? '⚔️ War' : '🎮 Normal'}</span>
+        </div>
+        <div class="battle-detail-item">
+            <span class="detail-label">Battle:</span>
+            <span class="detail-value">${activity.lastBattleType || 'Unknown'}</span>
+        </div>
+    `;
+}
+
+/**
+ * Create a player card element (used in live view and last war view)
+ * SINGLE SOURCE OF TRUTH for player card generation
+ * @param {Object} player - Player object with name, tag, decksUsed/decksUsedToday
+ * @param {Object} options - Configuration options
+ * @param {number} options.decksUsed - Number of decks used
+ * @param {number} options.totalPossible - Total possible decks (4 or 16)
+ * @param {Object} options.activity - Optional activity data for indicator
+ * @param {boolean} options.showActivity - Whether to show activity indicator
+ * @returns {HTMLElement} Player card div element
+ */
+function createPlayerCard(player, options) {
+    const {
+        decksUsed,
+        totalPossible = 4,
+        activity = null,
+        showActivity = false
+    } = options;
+
+    const isComplete = decksUsed >= totalPossible;
+    const statusClass = isComplete ? 'status-complete' : 'status-incomplete';
+    const statusText = `${decksUsed} / ${totalPossible}`;
+
+    const div = document.createElement('div');
+    div.className = 'player-card';
+
+    // Get activity indicator if available
+    const activityIndicator = (showActivity && activity) ? getActivityIndicator(activity) : '';
+
+    div.innerHTML = `
+        <div class="player-info">
+            ${activityIndicator}
+            <div>
+                <span class="player-name">${player.name}</span>
+                <span class="player-tag">${player.tag || 'Total Decks'}</span>
+            </div>
+        </div>
+        <div class="decks-status ${statusClass}">
+            ${statusText}
+        </div>
+    `;
+
+    return div;
+}
+
+/**
+ * Create a player row element for history table
+ * SINGLE SOURCE OF TRUTH for player row generation
+ * @param {Object} player - Player object with tag and name
+ * @param {Object} options - Configuration options
+ * @param {Array} options.days - Array of day strings
+ * @param {Object} options.history - Full history object
+ * @param {Object} options.activity - Optional activity data
+ * @param {boolean} options.hasLeft - Whether player left clan
+ * @param {boolean} options.criticalWindow - Whether in critical window
+ * @returns {HTMLElement} Table row element
+ */
+function createPlayerRow(player, options) {
+    const {
+        days = [],
+        history = {},
+        activity = null,
+        hasLeft = false,
+        criticalWindow = false
+    } = options;
+
+    const tr = document.createElement('tr');
+    tr.dataset.playerTag = player.tag;
+    tr.dataset.hasLeft = hasLeft;
+    tr.classList.add('player-row');
+
+    const playerNameDisplay = hasLeft
+        ? `${player.name} <span style="color: var(--text-secondary); font-size: 0.75rem;">(left)</span>`
+        : player.name;
+
+    const hasActivity = !!activity;
+
+    // Build player cell with optional expand button
+    let rowHtml = `<td class="player-cell">
+        <div class="player-info-row">
+            <div class="player-names">
+                <div class="player-name">${playerNameDisplay}</div>
+                <div class="player-tag">${player.tag}</div>
+            </div>
+            ${hasActivity && criticalWindow ? '<button class="expand-btn" data-expanded="false">+</button>' : ''}
+        </div>
+    </td>`;
+
+    let isPerfectPlayer = true;
+    let totalDecksForPlayer = 0;
+    let totalPointsForPlayer = 0;
+    const dailyPointsMap = {};
+    const dailyDecksMap = {};
+
+    // Build day columns
+    days.forEach((day) => {
+        const currentDayObj = history.days[day];
+        const dayNum = parseInt(day);
+        const prevDay = String(dayNum - 1);
+        const prevDayObj = dayNum > 1 ? history.days[prevDay] : null;
+
+        const currentPlayers = currentDayObj.players || currentDayObj;
+        const prevPlayers = prevDayObj ? (prevDayObj.players || prevDayObj) : {};
+
+        const currP = currentPlayers[player.tag];
+        const prevP = prevPlayers[player.tag];
+
+        let decksTotal = currP ? currP.decksUsed : 0;
+        let decksPrev = prevP ? prevP.decksUsed : 0;
+
+        let dailyDecks = decksTotal - decksPrev;
+        if (dailyDecks < 0) dailyDecks = 0;
+        if (dailyDecks < 4) isPerfectPlayer = false;
+
+        dailyDecksMap[day] = dailyDecks;
+        totalDecksForPlayer += dailyDecks;
+
+        // Calculate daily points
+        let fameTotal = currP ? (currP.fame || 0) : 0;
+        let famePrev = prevP ? (prevP.fame || 0) : 0;
+        let dailyPoints = fameTotal - famePrev;
+        if (dailyPoints < 0) dailyPoints = 0;
+
+        dailyPointsMap[day] = dailyPoints;
+        totalPointsForPlayer = fameTotal;
+
+        // Color logic
+        let valClass = 'val-miss';
+        if (dailyDecks >= 4) valClass = 'val-perfect';
+
+        rowHtml += `<td class="history-val ${valClass}" data-day="${day}">${dailyDecks} / 4</td>`;
+    });
+
+    // Add points column
+    const pointsDisplay = totalPointsForPlayer > 0 ? totalPointsForPlayer.toLocaleString() : '-';
+    rowHtml += `<td class="history-val points-cell">${pointsDisplay}</td>`;
+
+    // Store data on row
+    tr.dataset.totalDecks = totalDecksForPlayer;
+    tr.dataset.totalPoints = totalPointsForPlayer;
+    tr.dataset.dailyPoints = JSON.stringify(dailyPointsMap);
+    tr.dataset.dailyDecks = JSON.stringify(dailyDecksMap);
+
+    if (isPerfectPlayer) {
+        tr.classList.add('history-row-completed');
+        tr.classList.add('hidden-row');
+    }
+
+    // Hide inactive left players by default
+    if (hasLeft && totalDecksForPlayer === 0) {
+        tr.style.display = 'none';
+        tr.dataset.hiddenByDefault = 'true';
+    }
+
+    if (hasLeft) {
+        tr.style.opacity = '0.6';
+        tr.title = totalDecksForPlayer > 0
+            ? 'Player left the clan (played decks)'
+            : 'Player left the clan (no decks played)';
+    }
+
+    tr.innerHTML = rowHtml;
+
+    // Add expand button click handler if activity exists
+    if (hasActivity && criticalWindow) {
+        const expandBtn = tr.querySelector('.expand-btn');
+        if (expandBtn) {
+            expandBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const isExpanded = expandBtn.dataset.expanded === 'true';
+
+                if (isExpanded) {
+                    // Collapse
+                    const detailRow = tr.nextElementSibling;
+                    if (detailRow && detailRow.classList.contains('detail-row')) {
+                        detailRow.remove();
+                    }
+                    expandBtn.textContent = '+';
+                    expandBtn.dataset.expanded = 'false';
+                } else {
+                    // Expand
+                    const detailRow = document.createElement('tr');
+                    detailRow.className = 'detail-row';
+                    const colSpan = days.length + 2; // days + player name + points
+                    const activityDetailsHTML = generateActivityDetailsHTML(activity);
+
+                    detailRow.innerHTML = `
+                        <td colspan="${colSpan}" class="detail-cell">
+                            <div class="battle-details">
+                                ${activityDetailsHTML}
+                            </div>
+                        </td>
+                    `;
+
+                    tr.insertAdjacentElement('afterend', detailRow);
+                    expandBtn.textContent = '−';
+                    expandBtn.dataset.expanded = 'true';
+                }
+            });
+        }
+    }
+
+    return tr;
+}
+
+/**
  * Fetch and display developer player status for testing
  */
 async function fetchDeveloperStatus() {
@@ -147,27 +418,19 @@ async function fetchDeveloperStatus() {
             return;
         }
 
-        // Use shared config
-        const config = ACTIVITY_CONFIG[activity.status] || ACTIVITY_CONFIG.unknown;
-        const timeFormatted = activity.lastBattleMinutesAgo ? formatMinutesToHourMin(activity.lastBattleMinutesAgo) : 'N/A';
+        // Use single source of truth for activity details
+        const activityDetailsHTML = generateActivityDetailsHTML(activity);
 
         container.innerHTML = `
             <div class="dev-player-card">
                 <div class="dev-player-info">
-                    <span class="activity-indicator ${config.cssClass}"
-                          style="width: 16px; height: 16px; margin-top: 0;"></span>
                     <div>
                         <div style="font-weight: 600; font-size: 1.1rem;">jak ${DEV_PLAYER_TAG}</div>
-                        <div style="font-size: 0.9rem; color: var(--text-secondary);">
-                            ${config.emoji} ${config.label}
-                        </div>
                     </div>
                 </div>
                 <div class="dev-activity-details">
-                    <div>Last battle: <span class="highlight">${timeFormatted} ago</span></div>
-                    <div>Type: <span class="highlight">${activity.isWarBattle ? '⚔️ War' : '🎮 Normal'}</span></div>
-                    <div>Battle: <span class="highlight">${activity.lastBattleType || 'Unknown'}</span></div>
-                    <div style="font-size: 0.75rem; margin-top: 0.25rem; opacity: 0.7;">
+                    ${activityDetailsHTML}
+                    <div style="font-size: 0.75rem; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid var(--border-color); opacity: 0.7;">
                         Last updated: <span id="dev-last-update">${new Date().toLocaleTimeString()}</span>
                     </div>
                     <div style="font-size: 0.75rem; opacity: 0.7;">
@@ -730,13 +993,11 @@ async function renderHistory(history, currentMemberTags = []) {
         playerArray.push({ tag, name });
     });
 
-    playerArray.sort((a, b) => a.name.localeCompare(b.name));
-
-    // Pre-calculate which players are incomplete (for activity fetching)
+    // Pre-calculate player stats for sorting and activity fetching
+    const playerStats = [];
     const incompletePlayers = [];
-    const maxTotalDecks = days.length * 4; // e.g., 4 days = 16 total decks
+    const maxTotalDecks = days.length * 4;
 
-    // Calculate total decks for each player to identify incomplete ones
     playerArray.forEach(p => {
         let totalForPlayer = 0;
         days.forEach(day => {
@@ -744,13 +1005,29 @@ async function renderHistory(history, currentMemberTags = []) {
             const participants = dayObj.players || dayObj;
             const player = participants[p.tag];
             if (player) {
-                totalForPlayer = player.decksUsed || 0; // Use cumulative
+                // Calculate daily decks
+                const dayNum = parseInt(day);
+                const prevDay = String(dayNum - 1);
+                const prevDayObj = dayNum > 1 ? history.days[prevDay] : null;
+                const prevParticipants = prevDayObj ? (prevDayObj.players || prevDayObj) : {};
+                const prevPlayer = prevParticipants[p.tag];
+
+                const currentDecks = player.decksUsed || 0;
+                const prevDecks = prevPlayer ? (prevPlayer.decksUsed || 0) : 0;
+                const dailyDecks = Math.max(0, currentDecks - prevDecks);
+                totalForPlayer += dailyDecks;
             }
         });
+
+        playerStats.push({ tag: p.tag, name: p.name, totalDecks: totalForPlayer });
+
         if (totalForPlayer < maxTotalDecks) {
             incompletePlayers.push(p.tag);
         }
     });
+
+    // Sort by total decks (highest to lowest) as default
+    playerStats.sort((a, b) => b.totalDecks - a.totalDecks);
 
     // Fetch activity data if in critical window
     if (criticalWindow && incompletePlayers.length > 0) {
@@ -759,171 +1036,26 @@ async function renderHistory(history, currentMemberTags = []) {
 
     // Calculate total decks played for deck counter
     let totalDecksPlayed = 0;
-    const maxDecksPerDay = 50 * 4; // Clan max capacity (50 players) × 4 decks - shows % of clan potential used
 
-    playerArray.forEach(p => {
-        const tr = document.createElement('tr');
-
-        // Check if player left (not in current clan members)
+    playerStats.forEach(p => {
+        // Check if player left
         const hasLeft = currentMemberTags.length > 0 && !currentMemberTags.includes(p.tag);
-
-        const playerNameDisplay = hasLeft ? `${p.name} <span style="color: var(--text-secondary); font-size: 0.75rem;">(left)</span>` : p.name;
-
-        // Store tag for filtering
-        tr.dataset.playerTag = p.tag;
-        tr.dataset.hasLeft = hasLeft;
-        tr.classList.add('player-row');
-
-        // Get activity data for this player
         const activity = playerActivityMap[p.tag];
-        const hasActivity = !!activity;
 
-        // Start building row HTML (NO activity indicator in collapsed view)
-        let rowHtml = `<td class="player-cell">
-            <div class="player-info-row">
-                <div class="player-names">
-                    <div class="player-name">${playerNameDisplay}</div>
-                    <div class="player-tag">${p.tag}</div>
-                </div>
-                ${hasActivity && criticalWindow ? '<button class="expand-btn" data-expanded="false">+</button>' : ''}
-            </div>
-        </td>`;
-
-        let isPerfectPlayer = true; // Assume perfect until proven otherwise
-        let totalDecksForPlayer = 0; // Track total decks for this player
-        let totalPointsForPlayer = 0; // Track total points for this player
-        const dailyPointsMap = {}; // Track points per day
-        const dailyDecksMap = {}; // Track decks per day
-
-        days.forEach((day, index) => {
-            const currentDayObj = history.days[day];
-
-            // CRITICAL FIX: Look at ACTUAL previous day number, not previous in filtered array
-            // This prevents treating cumulative values as daily when days are missing
-            const dayNum = parseInt(day);
-            const prevDay = String(dayNum - 1);
-            const prevDayObj = dayNum > 1 ? history.days[prevDay] : null;
-
-            const currentPlayers = currentDayObj.players || currentDayObj;
-            const prevPlayers = prevDayObj ? (prevDayObj.players || prevDayObj) : {};
-
-            const currP = currentPlayers[p.tag];
-            const prevP = prevPlayers[p.tag];
-
-            let decksTotal = currP ? currP.decksUsed : 0;
-            let decksPrev = prevP ? prevP.decksUsed : 0;
-
-            let dailyDecks = decksTotal - decksPrev;
-            if (dailyDecks < 0) dailyDecks = 0;
-            if (dailyDecks < 4) isPerfectPlayer = false; // logic: if any day is less than 4, not perfect
-
-            dailyDecksMap[day] = dailyDecks;
-            totalDecksForPlayer += dailyDecks;
-
-            // Calculate daily points (difference from previous day)
-            let fameTotal = currP ? (currP.fame || 0) : 0;
-            let famePrev = prevP ? (prevP.fame || 0) : 0;
-            let dailyPoints = fameTotal - famePrev;
-            if (dailyPoints < 0) dailyPoints = 0;
-
-            dailyPointsMap[day] = dailyPoints;
-            totalPointsForPlayer = fameTotal; // Keep cumulative total
-
-            // Color Logic
-            let valClass = 'val-miss';
-            if (dailyDecks >= 4) valClass = 'val-perfect';
-
-            rowHtml += `<td class="history-val ${valClass}" data-day="${day}">${dailyDecks} / 4</td>`;
-        });
-
-        // Add points column as rightmost column
-        const pointsDisplay = totalPointsForPlayer > 0 ? totalPointsForPlayer.toLocaleString() : '-';
-        rowHtml += `<td class="history-val points-cell">${pointsDisplay}</td>`;
-
-        // Add to total deck count
-        totalDecksPlayed += totalDecksForPlayer;
-
-        // Store total decks and points on row for filtering/sorting
-        tr.dataset.totalDecks = totalDecksForPlayer;
-        tr.dataset.totalPoints = totalPointsForPlayer;
-        tr.dataset.dailyPoints = JSON.stringify(dailyPointsMap); // Store daily points for filtering
-        tr.dataset.dailyDecks = JSON.stringify(dailyDecksMap); // Store daily decks for filtering
-
-        if (isPerfectPlayer) {
-            tr.classList.add('history-row-completed');
-            tr.classList.add('hidden-row'); // Hidden by default
-        }
-
-        // Only hide departed players with 0 decks by default
-        if (hasLeft && totalDecksForPlayer === 0) {
-            tr.style.display = 'none';
-            tr.dataset.hiddenByDefault = 'true';
-        }
-
-        if (hasLeft) {
-            tr.style.opacity = '0.6';
-            tr.title = totalDecksForPlayer > 0 ? 'Player left the clan (played decks)' : 'Player left the clan (no decks played)';
-        }
-
-        tr.innerHTML = rowHtml;
-
-        // Add click handler for expand button (if activity data exists)
-        if (hasActivity && criticalWindow) {
-            const expandBtn = tr.querySelector('.expand-btn');
-            if (expandBtn) {
-                expandBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const isExpanded = expandBtn.dataset.expanded === 'true';
-
-                    if (isExpanded) {
-                        // Collapse - remove detail row
-                        const detailRow = tr.nextElementSibling;
-                        if (detailRow && detailRow.classList.contains('detail-row')) {
-                            detailRow.remove();
-                        }
-                        expandBtn.textContent = '+';
-                        expandBtn.dataset.expanded = 'false';
-                    } else {
-                        // Expand - create and insert detail row
-                        const detailRow = document.createElement('tr');
-                        detailRow.className = 'detail-row';
-
-                        const colSpan = days.length + 2; // days + player name + points
-
-                        // Get activity indicator for expanded view
-                        const activityIndicatorHtml = getActivityIndicator(activity);
-                        const timeFormatted = formatMinutesToHourMin(activity.lastBattleMinutesAgo);
-
-                        detailRow.innerHTML = `
-                            <td colspan="${colSpan}" class="detail-cell">
-                                <div class="battle-details">
-                                    <div class="battle-detail-item">
-                                        <span class="detail-label">Status:</span>
-                                        <span class="detail-value">${activityIndicatorHtml}</span>
-                                    </div>
-                                    <div class="battle-detail-item">
-                                        <span class="detail-label">Last battle:</span>
-                                        <span class="detail-value">${timeFormatted} ago</span>
-                                    </div>
-                                    <div class="battle-detail-item">
-                                        <span class="detail-label">Type:</span>
-                                        <span class="detail-value">${activity.isWarBattle ? '⚔️ War' : '🎮 Normal'}</span>
-                                    </div>
-                                    <div class="battle-detail-item">
-                                        <span class="detail-label">Battle:</span>
-                                        <span class="detail-value">${activity.lastBattleType || 'Unknown'}</span>
-                                    </div>
-                                </div>
-                            </td>
-                        `;
-
-                        tr.insertAdjacentElement('afterend', detailRow);
-                        expandBtn.textContent = '−';
-                        expandBtn.dataset.expanded = 'true';
-                    }
-                });
+        // Use reusable createPlayerRow function
+        const tr = createPlayerRow(
+            { tag: p.tag, name: p.name },
+            {
+                days,
+                history,
+                activity,
+                hasLeft,
+                criticalWindow
             }
-        }
+        );
+
+        // Get total decks from the row's dataset (set by createPlayerRow)
+        totalDecksPlayed += parseInt(tr.dataset.totalDecks) || 0;
 
         tbody.appendChild(tr);
     });
@@ -1422,6 +1554,52 @@ function filterByDay(selectedDay, table, activeBtn, silent = false) {
         }
     });
 
+    // Update completion status based on selected day
+    table.querySelectorAll('tbody tr').forEach(row => {
+        const dailyDecksData = row.dataset.dailyDecks;
+        if (!dailyDecksData) return;
+
+        try {
+            const dailyDecksMap = JSON.parse(dailyDecksData);
+            let isCompleted = false;
+
+            if (selectedDay === 'all') {
+                // For "Show All", check if player completed ALL days
+                const totalDecks = parseInt(row.dataset.totalDecks) || 0;
+                const days = Object.keys(dailyDecksMap);
+                const maxTotalDecks = days.length * 4;
+                isCompleted = totalDecks >= maxTotalDecks;
+            } else {
+                // For specific day, check if player completed THAT day (4 decks)
+                const dayDecks = dailyDecksMap[selectedDay] || 0;
+                isCompleted = dayDecks >= 4;
+            }
+
+            // Update row class based on completion status
+            if (isCompleted) {
+                row.classList.add('history-row-completed');
+            } else {
+                row.classList.remove('history-row-completed');
+            }
+
+            // Apply current "Hide Completed" button state
+            const toggleCompletedBtn = document.getElementById('toggle-history-completed');
+            if (toggleCompletedBtn && toggleCompletedBtn.dataset.hidden === 'true') {
+                // Button is in "Show Completed" mode, so completed rows should be hidden
+                if (isCompleted) {
+                    row.classList.add('hidden-row');
+                } else {
+                    row.classList.remove('hidden-row');
+                }
+            } else {
+                // Button is in "Hide Completed" mode, so all rows visible
+                row.classList.remove('hidden-row');
+            }
+        } catch (e) {
+            console.error('Error parsing daily decks:', e);
+        }
+    });
+
     // Update deck counter based on filtered days
     const deckCounter = document.getElementById('deck-counter');
     if (deckCounter) {
@@ -1560,23 +1738,14 @@ function renderLastWarLog(data, clanTag) {
     }
 
     filteredParticipants.forEach(player => {
-        const decksUsed = player.decksUsed;
-        const totalPossible = 16;
-        const isComplete = decksUsed >= totalPossible;
-        const div = document.createElement('div');
-        div.className = 'player-card';
-        const statusClass = isComplete ? 'status-complete' : 'status-incomplete';
-
-        div.innerHTML = `
-            <div class="player-info">
-                <span class="player-name">${player.name}</span>
-                <span class="player-tag">Total Decks</span>
-            </div>
-            <div class="decks-status ${statusClass}">
-                ${decksUsed} / ${totalPossible}
-            </div>
-        `;
-        list.appendChild(div);
+        // Use reusable createPlayerCard function
+        const card = createPlayerCard(player, {
+            decksUsed: player.decksUsed,
+            totalPossible: 16,
+            activity: null,
+            showActivity: false
+        });
+        list.appendChild(card);
     });
 }
 
@@ -1650,30 +1819,19 @@ async function renderData(data) {
         const isComplete = decksUsed >= 4;
         if (!isComplete) incompleteCount++;
 
-        const div = document.createElement('div');
-        div.className = 'player-card';
-        const statusClass = isComplete ? 'status-complete' : 'status-incomplete';
-        const statusText = `${decksUsed} / 4`;
-
         // Get activity status for this player
         const activity = playerActivity[player.tag];
-        const activityIndicator = activity ? getActivityIndicator(activity) : '';
 
-        div.innerHTML = `
-            <div class="player-info">
-                ${activityIndicator}
-                <div>
-                    <span class="player-name">${player.name}</span>
-                    <span class="player-tag">${player.tag}</span>
-                </div>
-            </div>
-            <div class="decks-status ${statusClass}">
-                ${statusText}
-            </div>
-        `;
+        // Use reusable createPlayerCard function
+        const card = createPlayerCard(player, {
+            decksUsed,
+            totalPossible: 4,
+            activity,
+            showActivity: criticalWindow
+        });
 
-        if (isComplete) completedList.appendChild(div);
-        else playerList.appendChild(div);
+        if (isComplete) completedList.appendChild(card);
+        else playerList.appendChild(card);
     });
 
     incompleteCountLabel.textContent = incompleteCount;
