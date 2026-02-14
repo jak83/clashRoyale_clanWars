@@ -1092,4 +1092,20 @@ h2 {
         height: 20px;
         font-size: 1rem;
     }
+
+    /* Fix detail row on mobile - break out of fixed table layout */
+    .detail-row {
+        display: block;
+        width: 100%;
+    }
+
+    .detail-cell {
+        display: block !important;
+        width: 100% !important;
+        padding: 0.5rem !important;
+    }
+
+    .battle-detail-item {
+        font-size: 0.75rem;
+    }
 }
