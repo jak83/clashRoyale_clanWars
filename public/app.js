@@ -93,6 +93,17 @@ async function fetchPlayerActivity(playerTags) {
 }
 
 /**
+ * Format minutes as h:mm (e.g., 0:05, 1:30, 2:45)
+ * @param {number} totalMinutes - Total minutes
+ * @returns {string} Formatted time string
+ */
+function formatMinutesToHourMin(totalMinutes) {
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    return `${hours}:${minutes.toString().padStart(2, '0')}`;
+}
+
+/**
  * Get activity indicator HTML based on player status
  * Shows colored dot WITH time evidence
  * @param {Object} activity - Player activity object
@@ -107,12 +118,13 @@ function getActivityIndicator(activity) {
     if (!config) return '';
 
     const minutesAgo = activity.lastBattleMinutesAgo;
-    const tooltip = `${config.description}\nLast battle: ${minutesAgo}m ago`;
+    const timeFormatted = formatMinutesToHourMin(minutesAgo);
+    const tooltip = `${config.description}\nLast battle: ${timeFormatted} ago`;
 
-    // Show dot WITH time evidence (e.g., "🟢 2m")
+    // Show dot WITH time evidence (e.g., "🟢 0:02")
     return `<span class="activity-indicator-wrapper">
         <span class="activity-indicator ${config.cssClass}" title="${tooltip}"></span>
-        <span class="activity-time">${minutesAgo}m</span>
+        <span class="activity-time">${timeFormatted}</span>
     </span>`;
 }
 
@@ -137,6 +149,7 @@ async function fetchDeveloperStatus() {
 
         // Use shared config
         const config = ACTIVITY_CONFIG[activity.status] || ACTIVITY_CONFIG.unknown;
+        const timeFormatted = activity.lastBattleMinutesAgo ? formatMinutesToHourMin(activity.lastBattleMinutesAgo) : 'N/A';
 
         container.innerHTML = `
             <div class="dev-player-card">
@@ -151,7 +164,7 @@ async function fetchDeveloperStatus() {
                     </div>
                 </div>
                 <div class="dev-activity-details">
-                    <div>Last battle: <span class="highlight">${activity.lastBattleMinutesAgo || 'N/A'} min ago</span></div>
+                    <div>Last battle: <span class="highlight">${timeFormatted} ago</span></div>
                     <div>Type: <span class="highlight">${activity.isWarBattle ? '⚔️ War' : '🎮 Normal'}</span></div>
                     <div>Battle: <span class="highlight">${activity.lastBattleType || 'Unknown'}</span></div>
                     <div style="font-size: 0.75rem; margin-top: 0.25rem; opacity: 0.7;">
@@ -361,13 +374,6 @@ async function fetchHistory(force = false) {
     const container = document.getElementById('history-container');
     container.innerHTML = '<div class="loading-text">Loading history...</div>';
 
-    // Show/hide activity legend based on critical window
-    const criticalWindow = await checkCriticalWindow();
-    const legend = document.getElementById('activity-legend');
-    if (legend) {
-        legend.style.display = criticalWindow ? 'flex' : 'none';
-    }
-
     try {
         // Fetch both history and current clan members
         const [historyResponse, membersResponse] = await Promise.all([
@@ -387,7 +393,7 @@ async function fetchHistory(force = false) {
             console.warn('Failed to fetch current members, will show all participants');
         }
 
-        renderHistory(history, currentMemberTags);
+        await renderHistory(history, currentMemberTags);
     } catch (error) {
         console.error("History fetch error:", error);
         container.innerHTML = '<div class="error-text">Could not load history.</div>';
@@ -630,9 +636,13 @@ function renderWarStats(currentRace, raceLog) {
     }
 }
 
-function renderHistory(history, currentMemberTags = []) {
+async function renderHistory(history, currentMemberTags = []) {
     const container = document.getElementById('history-container');
     container.innerHTML = '';
+
+    // Check if in critical window and fetch activity data
+    const criticalWindow = await checkCriticalWindow();
+    let playerActivityMap = {};
 
     if (!history || !history.days || Object.keys(history.days).length === 0) {
         container.innerHTML = '<div class="training-message">No history data allocated yet. Wait for API updates.</div>';
@@ -722,6 +732,31 @@ function renderHistory(history, currentMemberTags = []) {
 
     playerArray.sort((a, b) => a.name.localeCompare(b.name));
 
+    // Pre-calculate which players are incomplete (for activity fetching)
+    const incompletePlayers = [];
+    const maxTotalDecks = days.length * 4; // e.g., 4 days = 16 total decks
+
+    // Calculate total decks for each player to identify incomplete ones
+    playerArray.forEach(p => {
+        let totalForPlayer = 0;
+        days.forEach(day => {
+            const dayObj = history.days[day];
+            const participants = dayObj.players || dayObj;
+            const player = participants[p.tag];
+            if (player) {
+                totalForPlayer = player.decksUsed || 0; // Use cumulative
+            }
+        });
+        if (totalForPlayer < maxTotalDecks) {
+            incompletePlayers.push(p.tag);
+        }
+    });
+
+    // Fetch activity data if in critical window
+    if (criticalWindow && incompletePlayers.length > 0) {
+        playerActivityMap = await fetchPlayerActivity(incompletePlayers);
+    }
+
     // Calculate total decks played for deck counter
     let totalDecksPlayed = 0;
     const maxDecksPerDay = 50 * 4; // Clan max capacity (50 players) × 4 decks - shows % of clan potential used
@@ -739,14 +774,18 @@ function renderHistory(history, currentMemberTags = []) {
         tr.dataset.hasLeft = hasLeft;
         tr.classList.add('player-row');
 
-        // Will add activity indicator and expand button later (after we know if player is incomplete)
+        // Get activity data for this player
+        const activity = playerActivityMap[p.tag];
+        const hasActivity = !!activity;
+
+        // Start building row HTML (NO activity indicator in collapsed view)
         let rowHtml = `<td class="player-cell">
             <div class="player-info-row">
                 <div class="player-names">
                     <div class="player-name">${playerNameDisplay}</div>
                     <div class="player-tag">${p.tag}</div>
                 </div>
-                <span class="expand-btn" style="display: none;">+</span>
+                ${hasActivity && criticalWindow ? '<button class="expand-btn" data-expanded="false">+</button>' : ''}
             </div>
         </td>`;
 
@@ -758,7 +797,12 @@ function renderHistory(history, currentMemberTags = []) {
 
         days.forEach((day, index) => {
             const currentDayObj = history.days[day];
-            const prevDayObj = index > 0 ? history.days[days[index - 1]] : null;
+
+            // CRITICAL FIX: Look at ACTUAL previous day number, not previous in filtered array
+            // This prevents treating cumulative values as daily when days are missing
+            const dayNum = parseInt(day);
+            const prevDay = String(dayNum - 1);
+            const prevDayObj = dayNum > 1 ? history.days[prevDay] : null;
 
             const currentPlayers = currentDayObj.players || currentDayObj;
             const prevPlayers = prevDayObj ? (prevDayObj.players || prevDayObj) : {};
@@ -822,6 +866,65 @@ function renderHistory(history, currentMemberTags = []) {
         }
 
         tr.innerHTML = rowHtml;
+
+        // Add click handler for expand button (if activity data exists)
+        if (hasActivity && criticalWindow) {
+            const expandBtn = tr.querySelector('.expand-btn');
+            if (expandBtn) {
+                expandBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const isExpanded = expandBtn.dataset.expanded === 'true';
+
+                    if (isExpanded) {
+                        // Collapse - remove detail row
+                        const detailRow = tr.nextElementSibling;
+                        if (detailRow && detailRow.classList.contains('detail-row')) {
+                            detailRow.remove();
+                        }
+                        expandBtn.textContent = '+';
+                        expandBtn.dataset.expanded = 'false';
+                    } else {
+                        // Expand - create and insert detail row
+                        const detailRow = document.createElement('tr');
+                        detailRow.className = 'detail-row';
+
+                        const colSpan = days.length + 2; // days + player name + points
+
+                        // Get activity indicator for expanded view
+                        const activityIndicatorHtml = getActivityIndicator(activity);
+                        const timeFormatted = formatMinutesToHourMin(activity.lastBattleMinutesAgo);
+
+                        detailRow.innerHTML = `
+                            <td colspan="${colSpan}" class="detail-cell">
+                                <div class="battle-details">
+                                    <div class="battle-detail-item">
+                                        <span class="detail-label">Status:</span>
+                                        <span class="detail-value">${activityIndicatorHtml}</span>
+                                    </div>
+                                    <div class="battle-detail-item">
+                                        <span class="detail-label">Last battle:</span>
+                                        <span class="detail-value">${timeFormatted} ago</span>
+                                    </div>
+                                    <div class="battle-detail-item">
+                                        <span class="detail-label">Type:</span>
+                                        <span class="detail-value">${activity.isWarBattle ? '⚔️ War' : '🎮 Normal'}</span>
+                                    </div>
+                                    <div class="battle-detail-item">
+                                        <span class="detail-label">Battle:</span>
+                                        <span class="detail-value">${activity.lastBattleType || 'Unknown'}</span>
+                                    </div>
+                                </div>
+                            </td>
+                        `;
+
+                        tr.insertAdjacentElement('afterend', detailRow);
+                        expandBtn.textContent = '−';
+                        expandBtn.dataset.expanded = 'true';
+                    }
+                });
+            }
+        }
+
         tbody.appendChild(tr);
     });
 
@@ -1574,12 +1677,6 @@ async function renderData(data) {
     });
 
     incompleteCountLabel.textContent = incompleteCount;
-
-    // Show/hide activity legend based on critical window
-    const legend = document.getElementById('activity-legend');
-    if (legend) {
-        legend.style.display = criticalWindow ? 'flex' : 'none';
-    }
 
     // Default: Show only incomplete. Ensure button shows correct text.
     if (completedList.classList.contains('hidden')) {
