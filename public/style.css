@@ -562,6 +562,14 @@ h2 {
     table-layout: fixed; /* Force column widths */
 }
 
+/* Fixed width for player column to prevent shifting with expand button */
+.history-table th:first-child,
+.history-table td:first-child {
+    width: 160px;
+    min-width: 160px;
+    max-width: 160px;
+}
+
 .history-table th,
 .history-table td {
     padding: 0.5rem;
@@ -1036,10 +1044,15 @@ h2 {
     transform: scale(0.95);
 }
 
-/* Detail Row */
+/* Detail Row - break out of fixed table layout */
 .detail-row {
     background: rgba(59, 130, 246, 0.05);
     animation: slideDown 0.2s ease-out;
+}
+
+.detail-row td {
+    /* Ensure detail cell doesn't interfere with column widths */
+    padding: 0 !important;
 }
 
 @keyframes slideDown {
@@ -1056,6 +1069,11 @@ h2 {
 .detail-cell {
     padding: 0.75rem 1rem !important;
     border-bottom: 1px solid var(--border-color);
+}
+
+.detail-cell .battle-details {
+    /* Wrapper div handles the actual padding/layout */
+    width: 100%;
 }
 
 .battle-details {
