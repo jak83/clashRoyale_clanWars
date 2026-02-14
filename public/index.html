@@ -10,7 +10,7 @@
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-KTL6KNFE7L"></script>
     <script>
         window.dataLayer = window.dataLayer || [];
-        function gtag(){dataLayer.push(arguments);}
+        function gtag() { dataLayer.push(arguments); }
         gtag('js', new Date());
         gtag('config', 'G-KTL6KNFE7L');
     </script>
@@ -36,18 +36,21 @@
             <!-- HISTORY VIEW -->
             <div id="view-history" class="tab-content active" data-testid="view-daily-history">
                 <div class="history-controls" data-testid="history-controls">
-                    <button id="refresh-history" class="action-btn" data-testid="btn-refresh-history">Refresh History</button>
+                    <button id="refresh-history" class="action-btn" data-testid="btn-refresh-history">Refresh
+                        History</button>
                     <button id="toggle-history-completed" class="action-btn" data-testid="btn-toggle-completed"
                         style="margin-left: 1rem; background-color: var(--accent-blue);">Hide Completed</button>
                     <button id="toggle-left-players" class="action-btn" data-testid="btn-toggle-left-players"
                         style="margin-left: 1rem; background-color: var(--accent-orange);">Hide Left Players</button>
                 </div>
                 <!-- Player Count -->
-                <div id="player-count" data-testid="player-count" style="text-align: center; margin: 1rem 0; font-size: 1rem; color: var(--text-secondary);">
+                <div id="player-count" data-testid="player-count"
+                    style="text-align: center; margin: 1rem 0; font-size: 1rem; color: var(--text-secondary);">
                     <!-- Player count injected here by JS -->
                 </div>
                 <!-- Day Filter Buttons -->
-                <div id="day-filter-buttons" class="day-filters" data-testid="day-filter-buttons" style="margin: 1rem 0; display: none;">
+                <div id="day-filter-buttons" class="day-filters" data-testid="day-filter-buttons"
+                    style="margin: 1rem 0; display: none;">
                     <!-- Day buttons injected here by JS -->
                 </div>
                 <div id="history-container" class="history-table-container" data-testid="history-container">
@@ -59,6 +62,9 @@
             <!-- WAR STATS VIEW -->
             <div id="view-war-stats" class="tab-content hidden" data-testid="view-war-stats">
                 <h2 data-testid="war-stats-title">War Statistics</h2>
+                <div class="history-controls" style="margin-bottom: 1rem;">
+                    <button id="refresh-war-stats" class="action-btn">Refresh War Stats</button>
+                </div>
                 <div id="war-stats-container" data-testid="war-stats-container">
                     <div class="loading-text">Loading war statistics...</div>
                 </div>
@@ -67,8 +73,10 @@
             <!-- LAST WAR VIEW -->
             <div id="view-last-war" class="tab-content hidden" data-testid="view-last-war">
                 <h2 data-testid="last-war-title">Last War Stats</h2>
-                <div data-testid="last-war-note" style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 8px; padding: 1rem; margin-bottom: 1rem; font-size: 0.9rem; color: var(--text-secondary);">
-                    <strong>Note:</strong> Currently showing data from Clash Royale API. Once the current war ends, detailed daily history will be archived locally and available here.
+                <div data-testid="last-war-note"
+                    style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 8px; padding: 1rem; margin-bottom: 1rem; font-size: 0.9rem; color: var(--text-secondary);">
+                    <strong>Note:</strong> Currently showing data from Clash Royale API. Once the current war ends,
+                    detailed daily history will be archived locally and available here.
                 </div>
                 <section id="last-war-section" data-testid="last-war-section">
                     <div id="last-war-summary" class="summary-box" data-testid="last-war-summary"></div>
@@ -83,7 +91,8 @@
         <!-- Support Section -->
         <footer class="support-footer" data-testid="support-footer">
             <p data-testid="support-message">Enjoying the tracker? Consider supporting the development!</p>
-            <a href="https://paypal.me/ClanWarDev" target="_blank" rel="noopener noreferrer" class="support-btn" data-testid="support-paypal-link">
+            <a href="https://paypal.me/ClanWarDev" target="_blank" rel="noopener noreferrer" class="support-btn"
+                data-testid="support-paypal-link">
                 ☕ Support via PayPal
             </a>
         </footer>

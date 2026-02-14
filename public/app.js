@@ -86,7 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // History Actions
-    document.getElementById('refresh-history').addEventListener('click', fetchHistory);
+    document.getElementById('refresh-history').addEventListener('click', () => fetchHistory(true));
 
     const toggleLeftPlayersBtn = document.getElementById('toggle-left-players');
     if (toggleLeftPlayersBtn) {
@@ -137,16 +137,22 @@ document.addEventListener('DOMContentLoaded', () => {
             updatePlayerCount();
         });
     }
+
+    // Refresh War Stats Button
+    const refreshWarBtn = document.getElementById('refresh-war-stats');
+    if (refreshWarBtn) {
+        refreshWarBtn.addEventListener('click', () => fetchWarStats(true));
+    }
 });
 
-async function fetchHistory() {
+async function fetchHistory(force = false) {
     const container = document.getElementById('history-container');
     container.innerHTML = '<div class="loading-text">Loading history...</div>';
 
     try {
         // Fetch both history and current clan members
         const [historyResponse, membersResponse] = await Promise.all([
-            fetch('/api/race/history'),
+            fetch(`/api/race/history${force ? '?force=true' : ''}`),
             fetch('/api/clan/members')
         ]);
 
@@ -169,13 +175,13 @@ async function fetchHistory() {
     }
 }
 
-async function fetchWarStats() {
+async function fetchWarStats(force = false) {
     const container = document.getElementById('war-stats-container');
     container.innerHTML = '<div class="loading-text">Loading war statistics...</div>';
 
     try {
         const [raceResponse, logResponse] = await Promise.all([
-            fetch('/api/race'),
+            fetch(`/api/race${force ? '?force=true' : ''}`),
             fetch('/api/race/log')
         ]);
 
@@ -204,6 +210,12 @@ function calculateTimeUntilReset() {
     if (now >= nextReset) {
         nextReset.setUTCDate(nextReset.getUTCDate() + 1);
     }
+
+    // ADJUSTMENT: User reports game clock is ~4 minutes ahead (reset happens earlier?)
+    // Or we are "behind" by 4 mins.
+    // If web shows 1h 04m and game shows 1h 00m, we are targeting a time 4 mins later than the game.
+    // So we subtract 4 minutes from the target.
+    nextReset.setMinutes(nextReset.getMinutes() - 4);
 
     const diff = nextReset - now;
     const hours = Math.floor(diff / (1000 * 60 * 60));
@@ -260,16 +272,16 @@ function renderWarStats(currentRace, raceLog) {
             <h4 style="margin-top: 1.5rem; margin-bottom: 0.5rem;">🏆 Live Standings</h4>
             <div class="standings-table">
                 ${sortedStandings.map((clan, index) => {
-                    const isUs = clan.tag === clanTag;
-                    const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
-                    return `
+            const isUs = clan.tag === clanTag;
+            const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
+            return `
                         <div class="standing-row ${isUs ? 'standing-us' : ''}">
                             <span class="standing-rank">${medal} ${index + 1}</span>
                             <span class="standing-name">${clan.name}</span>
                             <span class="standing-fame">${(clan.periodPoints || 0).toLocaleString()}</span>
                         </div>
                     `;
-                }).join('')}
+        }).join('')}
             </div>
         `;
     }
@@ -307,11 +319,11 @@ function renderWarStats(currentRace, raceLog) {
                 <h4 style="margin-top: 1.5rem; margin-bottom: 0.5rem;">🏁 Final Standings</h4>
                 <div class="standings-table">
                     ${lastWar.standings.map((standing, index) => {
-                        const isUs = standing.clan.tag === clanTag;
-                        const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
-                        const tChange = standing.trophyChange;
-                        const trophyColor = tChange > 0 ? 'var(--accent-green)' : tChange < 0 ? 'var(--accent-red)' : '';
-                        return `
+                const isUs = standing.clan.tag === clanTag;
+                const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
+                const tChange = standing.trophyChange;
+                const trophyColor = tChange > 0 ? 'var(--accent-green)' : tChange < 0 ? 'var(--accent-red)' : '';
+                return `
                             <div class="standing-row ${isUs ? 'standing-us' : ''}">
                                 <span class="standing-rank">${medal} ${standing.rank}</span>
                                 <span class="standing-name">${standing.clan.name}</span>
@@ -319,7 +331,7 @@ function renderWarStats(currentRace, raceLog) {
                                 <span class="standing-trophy" style="color: ${trophyColor}">${tChange > 0 ? '+' : ''}${tChange}</span>
                             </div>
                         `;
-                    }).join('')}
+            }).join('')}
                 </div>
             `;
 
@@ -358,8 +370,8 @@ function renderWarStats(currentRace, raceLog) {
                     </thead>
                     <tbody>
                         ${sortedByFame.map((player, index) => {
-                            const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
-                            return `
+            const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
+            return `
                                 <tr>
                                     <td class="rank-cell">${index + 1}</td>
                                     <td class="player-name-cell">
@@ -372,7 +384,7 @@ function renderWarStats(currentRace, raceLog) {
                                     <td class="stat-column fame-column">${(player.fame || 0).toLocaleString()} 🏅</td>
                                 </tr>
                             `;
-                        }).join('')}
+        }).join('')}
                     </tbody>
                 </table>
             </div>

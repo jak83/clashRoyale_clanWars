@@ -32,10 +32,18 @@ function loadHistory() {
 }
 
 function saveHistory(history) {
+    const tempFile = HISTORY_FILE + '.tmp';
     try {
-        fs.writeFileSync(HISTORY_FILE, JSON.stringify(history, null, 2));
+        // Write to temp file first
+        fs.writeFileSync(tempFile, JSON.stringify(history, null, 2));
+        // Rename temp file to actual file (atomic operation)
+        fs.renameSync(tempFile, HISTORY_FILE);
     } catch (err) {
         console.error("Error writing history file", err);
+        // Clean up temp file if it exists
+        if (fs.existsSync(tempFile)) {
+            try { fs.unlinkSync(tempFile); } catch (e) { }
+        }
     }
 }
 
@@ -48,6 +56,7 @@ function updateHistory(raceData, baseHistory = null, save = true) {
     const currentSectionIndex = raceData.sectionIndex;
 
     // 1. Check for New War Week -> Archive & Reset
+    // Only archive if we have a valid previous section (not null) AND it changed.
     if (save && history.sectionIndex !== null &&
         (history.sectionIndex !== currentSectionIndex || history.seasonId !== currentSeasonId)) {
 

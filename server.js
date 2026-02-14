@@ -60,7 +60,8 @@ setInterval(updateRaceData, 5 * 60 * 1000);
 // API Proxy Endpoint
 app.get('/api/race', async (req, res) => {
     // Return cached data if available, otherwise fetch
-    if (latestRaceData) {
+    // Return cached data if available, unless forced
+    if (latestRaceData && !req.query.force) {
         return res.json(latestRaceData);
     }
 
