@@ -2,6 +2,31 @@
 
 ## High Priority
 
+### 🔴 WhatsApp Reminder System
+**Status:** Not started
+**Goal:** Send reminders to players who haven't completed their decks
+
+**Phase 1 - Click-to-Send (Quick Win):**
+- Add "📱 Remind" button next to incomplete players
+- Clicking opens WhatsApp with pre-filled message
+- Format: `wa.me/{phone}?text={encoded_message}`
+- Message template: "Hey {player}, you have {X}/4 decks! Only {time} left before reset! ⚔️"
+- No phone number storage needed - user enters in browser
+
+**Phase 2 - Fully Automatic (Advanced):**
+- Use `whatsapp-web.js` Node.js library
+- Store player phone numbers (optional, with consent)
+- Auto-send at configurable times (e.g., 2h before reset, 30min before reset)
+- Only remind players with 0-3 decks
+- Priority: 3/4 decks (highest), 2/4 (medium), 1/4 (low), 0/4 (lowest)
+
+**Benefits:**
+- Significantly increases deck completion rate
+- Players appreciate the helpful reminder
+- Most impactful feature for clan participation
+
+---
+
 ### 🔴 Expandable Player Cards - Reimplementation Needed
 **Status:** Feature disabled (commit e5354db)
 **Problem:** Table layout breaks when expanding cards - columns shift and UI looks broken
