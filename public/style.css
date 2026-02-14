@@ -250,7 +250,7 @@ h2 {
 .dev-activity-details {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
+    gap: 0.5rem;
     font-size: 0.85rem;
     color: var(--text-secondary);
     text-align: right;
@@ -259,6 +259,14 @@ h2 {
 .dev-activity-details .highlight {
     color: var(--text-primary);
     font-weight: 600;
+}
+
+/* Developer section uses same battle detail structure */
+.dev-activity-details .battle-detail-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 .player-name {
