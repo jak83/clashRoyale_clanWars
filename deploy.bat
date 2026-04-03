@@ -87,6 +87,37 @@ echo.
 echo All tests passed! Proceeding with deployment...
 echo.
 
+echo Checking for uncommitted changes...
+git diff --exit-code > nul 2>&1
+if errorlevel 1 (
+    echo.
+    echo ========================================
+    echo ERROR: Uncommitted changes detected!
+    echo ========================================
+    echo.
+    echo Please commit or stash your changes before deploying:
+    echo   git add -A
+    echo   git commit -m "your message"
+    echo.
+    pause
+    exit /b 1
+)
+git diff --cached --exit-code > nul 2>&1
+if errorlevel 1 (
+    echo.
+    echo ========================================
+    echo ERROR: Staged but uncommitted changes detected!
+    echo ========================================
+    echo.
+    echo Please commit your staged changes before deploying:
+    echo   git commit -m "your message"
+    echo.
+    pause
+    exit /b 1
+)
+echo Working directory is clean.
+echo.
+
 echo [4/7] Creating backup on production server...
 ssh -i "C:\Users\JaniAhlgren\.ssh\oracle-vm.key" ubuntu@129.151.219.17 "cd clashApi && ./backup_history.sh"
 if errorlevel 1 (
