@@ -32,6 +32,7 @@
                 <button class="tab-btn active" data-tab="history" data-testid="tab-daily-history">Daily History</button>
                 <button class="tab-btn" data-tab="war-stats" data-testid="tab-war-stats">War Stats</button>
                 <button class="tab-btn" data-tab="last-war" data-testid="tab-last-war">Last War</button>
+                <button class="tab-btn" data-tab="viikkoskabat" data-testid="tab-viikkoskabat">!!Viikkoskabat!!!</button>
             </div>
 
             <!-- HISTORY VIEW -->
@@ -97,6 +98,26 @@
                         <!-- Last war stats will be populated here -->
                     </div>
                 </section>
+            </div>
+
+            <!-- VIIKKOSKABAT VIEW -->
+            <div id="view-viikkoskabat" class="tab-content hidden" data-testid="view-viikkoskabat">
+                <h2 style="text-align: center; margin-bottom: 1rem;">!!Viikkoskabat!!!</h2>
+                <div class="viikkoskabat-player-selector">
+                    <div class="viikkoskabat-selector-header">
+                        <span class="viikkoskabat-selector-title">Select players</span>
+                        <div>
+                            <button id="viikkoskabat-select-all" class="action-btn" style="font-size:0.8rem; padding: 0.3rem 0.7rem;">All</button>
+                            <button id="viikkoskabat-deselect-all" class="action-btn" style="font-size:0.8rem; padding: 0.3rem 0.7rem; background: var(--accent-orange);">None</button>
+                        </div>
+                    </div>
+                    <div id="viikkoskabat-player-list" class="viikkoskabat-checklist">
+                        <div class="loading-text">Loading players...</div>
+                    </div>
+                </div>
+                <div id="viikkoskabat-container">
+                    <div class="loading-text">Loading stats...</div>
+                </div>
             </div>
 
         </main>

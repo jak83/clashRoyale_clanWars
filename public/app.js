@@ -606,12 +606,26 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (btn.dataset.tab === 'war-stats') {
                 fetchWarStats();
             } else if (btn.dataset.tab === 'last-war') {
-                // Check if already loaded? or just load again
                 fetchRaceData().then(data => {
                     if (data && data.clan) fetchLastWarLog(data.clan.tag);
                 });
+            } else if (btn.dataset.tab === 'viikkoskabat') {
+                fetchViikkoskabat();
             }
         });
+    });
+
+    // Viikkoskabat: Select All / None
+    document.getElementById('viikkoskabat-select-all').addEventListener('click', () => {
+        const checkboxes = document.querySelectorAll('#viikkoskabat-player-list input[type="checkbox"]');
+        checkboxes.forEach(cb => { cb.checked = true; });
+        saveSelectedPlayers([...checkboxes].map(cb => cb.dataset.tag));
+        renderViikkoskabatStats(null, {});
+    });
+    document.getElementById('viikkoskabat-deselect-all').addEventListener('click', () => {
+        document.querySelectorAll('#viikkoskabat-player-list input[type="checkbox"]').forEach(cb => { cb.checked = false; });
+        saveSelectedPlayers([]);
+        renderViikkoskabatStats(null, {});
     });
 
     // History Actions
@@ -694,6 +708,149 @@ document.addEventListener('DOMContentLoaded', () => {
     PollingTimer.updateElement('next-poll-timer');
     setInterval(() => PollingTimer.updateElement('next-poll-timer'), 1000);
 });
+
+// --- Viikkoskabat ---
+const VIIKKOSKABAT_KEY = 'viikkoskabat_selected';
+
+function loadSelectedPlayers() {
+    try {
+        return JSON.parse(localStorage.getItem(VIIKKOSKABAT_KEY) || '[]');
+    } catch (e) {
+        return [];
+    }
+}
+
+function saveSelectedPlayers(tags) {
+    localStorage.setItem(VIIKKOSKABAT_KEY, JSON.stringify(tags));
+}
+
+async function fetchViikkoskabat() {
+    try {
+        const [historyResponse, membersResponse] = await Promise.all([
+            fetch('/api/race/history'),
+            fetch('/api/clan/members')
+        ]);
+
+        const history = historyResponse.ok ? await historyResponse.json() : { days: {} };
+        let currentMemberTags = [];
+        let allPlayers = {}; // tag -> name
+
+        if (membersResponse.ok) {
+            const membersData = await membersResponse.json();
+            currentMemberTags = membersData.memberTags || [];
+            (membersData.memberList || []).forEach(m => { allPlayers[m.tag] = m.name; });
+        }
+
+        // Also collect players from history
+        Object.values(history.days || {}).forEach(day => {
+            Object.entries(day.players || {}).forEach(([tag, p]) => {
+                if (!allPlayers[tag]) allPlayers[tag] = p.name;
+            });
+        });
+
+        renderViikkoskabatSelector(allPlayers);
+        renderViikkoskabatStats(history, allPlayers);
+    } catch (err) {
+        console.error('Viikkoskabat fetch error:', err);
+        document.getElementById('viikkoskabat-container').innerHTML = '<div class="error-text">Could not load data.</div>';
+    }
+}
+
+function renderViikkoskabatSelector(allPlayers) {
+    const list = document.getElementById('viikkoskabat-player-list');
+    const selected = new Set(loadSelectedPlayers());
+    const sorted = Object.entries(allPlayers).sort((a, b) => a[1].localeCompare(b[1]));
+
+    list.innerHTML = sorted.map(([tag, name]) => `
+        <label>
+            <input type="checkbox" data-tag="${tag}" ${selected.has(tag) ? 'checked' : ''}>
+            ${name}
+        </label>
+    `).join('');
+
+    list.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        cb.addEventListener('change', () => {
+            const nowSelected = [...list.querySelectorAll('input:checked')].map(c => c.dataset.tag);
+            saveSelectedPlayers(nowSelected);
+            renderViikkoskabatStats(null, allPlayers);
+        });
+    });
+}
+
+function renderViikkoskabatStats(history, allPlayers) {
+    const container = document.getElementById('viikkoskabat-container');
+    const selected = new Set(loadSelectedPlayers());
+
+    if (selected.size === 0) {
+        container.innerHTML = '<div class="training-message" style="text-align:center; padding: 2rem;">No players selected. Pick some above!</div>';
+        return;
+    }
+
+    // Get history from last render if not passed (after checkbox change)
+    if (!history) {
+        fetch('/api/race/history')
+            .then(r => r.json())
+            .then(h => renderViikkoskabatStats(h, allPlayers))
+            .catch(() => {});
+        return;
+    }
+
+    const days = Object.keys(history.days || {}).sort((a, b) => Number(a) - Number(b));
+
+    if (days.length === 0) {
+        container.innerHTML = '<div class="training-message" style="text-align:center; padding: 2rem;">No history data yet.</div>';
+        return;
+    }
+
+    // Build table
+    const lastDay = days[days.length - 1];
+
+    const thead = `<thead><tr>
+        <th style="text-align:left; padding: 0.5rem 0.75rem;">Player</th>
+        ${days.map(d => `<th style="padding: 0.5rem 0.75rem;">Day ${d}</th>`).join('')}
+        <th style="padding: 0.5rem 0.75rem;">Decks</th>
+        <th style="padding: 0.5rem 0.75rem;">Points</th>
+    </tr></thead>`;
+
+    const playerData = [...selected].map(tag => {
+        const name = allPlayers[tag] || tag;
+        let total = 0;
+        const dayCells = days.map(d => {
+            const player = (history.days[d]?.players || {})[tag];
+            const decks = player ? (player.decksUsedToday ?? player.decksUsed ?? 0) : '-';
+            if (typeof decks === 'number') total += decks;
+            const pct = typeof decks === 'number' ? decks / 4 : 0;
+            const color = pct >= 1 ? 'var(--accent-green)' : pct >= 0.5 ? 'var(--accent-orange)' : decks === '-' ? 'var(--text-secondary)' : 'var(--accent-red)';
+            return `<td style="text-align:center; padding: 0.5rem 0.75rem; color:${color}; font-weight:600;">${decks}</td>`;
+        }).join('');
+        const fame = (history.days[lastDay]?.players || {})[tag]?.fame ?? 0;
+        return { tag, name, total, fame, dayCells };
+    });
+
+    // Sort by fame descending
+    playerData.sort((a, b) => b.fame - a.fame);
+
+    const maxTotal = days.length * 4;
+    const rows = playerData.map(({ name, total, fame, dayCells }, i) => {
+        const rank = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
+        const totalColor = total >= maxTotal ? 'var(--accent-green)' : total >= maxTotal / 2 ? 'var(--accent-orange)' : 'var(--accent-red)';
+        const fameColor = fame > 0 ? 'var(--accent-blue)' : 'var(--text-secondary)';
+        return `<tr>
+            <td style="padding: 0.5rem 0.75rem; font-weight:500;">${rank} ${name}</td>
+            ${dayCells}
+            <td style="text-align:center; padding: 0.5rem 0.75rem; color:${totalColor}; font-weight:700;">${total}/${maxTotal}</td>
+            <td style="text-align:center; padding: 0.5rem 0.75rem; color:${fameColor}; font-weight:700;">${fame.toLocaleString()}</td>
+        </tr>`;
+    }).join('');
+
+    container.innerHTML = `
+        <div class="history-table-container">
+            <table class="history-table">
+                ${thead}
+                <tbody>${rows}</tbody>
+            </table>
+        </div>`;
+}
 
 async function fetchHistory(force = false) {
     const container = document.getElementById('history-container');
