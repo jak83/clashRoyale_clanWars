@@ -80,6 +80,46 @@ describe('historyManager', () => {
       expect(history.days[4]).toBeDefined();
     });
 
+    test('should record history during colosseum week (periodType colosseum)', () => {
+      const mockRaceData = {
+        seasonId: 123,
+        sectionIndex: 5,
+        periodIndex: 31, // Colosseum Day 1 (31 % 7 = 3, 3 - 2 = 1)
+        periodType: 'colosseum',
+        clan: {
+          participants: [
+            { tag: '#TEST1', name: 'Player1', decksUsed: 2, decksUsedToday: 2, fame: 500 }
+          ]
+        }
+      };
+
+      const history = historyManager.updateHistory(mockRaceData, null, false);
+
+      expect(history.days[1]).toBeDefined();
+      expect(history.days[1].players['#TEST1'].decksUsedToday).toBe(2);
+    });
+
+    test('should map colosseum periodIndex to correct war days (31-34 → days 1-4)', () => {
+      const days = [
+        { periodIndex: 31, expectedDay: 1 },
+        { periodIndex: 32, expectedDay: 2 },
+        { periodIndex: 33, expectedDay: 3 },
+        { periodIndex: 34, expectedDay: 4 },
+      ];
+
+      days.forEach(({ periodIndex, expectedDay }) => {
+        const mockRaceData = {
+          seasonId: 123,
+          sectionIndex: 5,
+          periodIndex,
+          periodType: 'colosseum',
+          clan: { participants: [{ tag: '#T', name: 'P', decksUsed: 0, decksUsedToday: 0, fame: 0 }] }
+        };
+        const history = historyManager.updateHistory(mockRaceData, null, false);
+        expect(history.days[expectedDay]).toBeDefined();
+      });
+    });
+
     test('should not save data during training days', () => {
       const emptyHistory = {
         seasonId: null,

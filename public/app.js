@@ -1,6 +1,9 @@
 // Global countdown interval
 let countdownInterval = null;
 
+// Cached next reset timestamp from server (null until first fetch)
+let nextResetTimestamp = null;
+
 /**
  * Reusable Polling Timer Utility
  * Tracks when the server will poll the API next and provides countdown
@@ -566,6 +569,7 @@ function updatePlayerCount() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    fetchResetTime();
     // Load history by default
     fetchHistory();
 
@@ -725,6 +729,8 @@ async function fetchWarStats(force = false) {
     const container = document.getElementById('war-stats-container');
     container.innerHTML = '<div class="loading-text">Loading war statistics...</div>';
 
+    await fetchResetTime();
+
     try {
         const [raceResponse, logResponse] = await Promise.all([
             fetch(`/api/race${force ? '?force=true' : ''}`),
@@ -745,23 +751,28 @@ async function fetchWarStats(force = false) {
     }
 }
 
+async function fetchResetTime() {
+    try {
+        const response = await fetch('/api/reset-time');
+        const data = await response.json();
+        if (data.nextResetTimestamp) {
+            nextResetTimestamp = data.nextResetTimestamp;
+        }
+    } catch (e) { /* keep using fallback */ }
+}
+
 function calculateTimeUntilReset() {
     const now = new Date();
+    let nextReset;
 
-    // Next reset is at 10:00 UTC (daily deck reset time)
-    const nextReset = new Date(now);
-    nextReset.setUTCHours(10, 0, 0, 0);
-
-    // If we're past 10:00 UTC today, target tomorrow
-    if (now >= nextReset) {
-        nextReset.setUTCDate(nextReset.getUTCDate() + 1);
+    if (nextResetTimestamp) {
+        nextReset = new Date(nextResetTimestamp);
+    } else {
+        // Fallback until server has observed a real reset
+        nextReset = new Date(now);
+        nextReset.setUTCHours(9, 46, 0, 0);
+        if (now >= nextReset) nextReset.setUTCDate(nextReset.getUTCDate() + 1);
     }
-
-    // ADJUSTMENT: User reports game clock is ~4 minutes ahead (reset happens earlier?)
-    // Or we are "behind" by 4 mins.
-    // If web shows 1h 04m and game shows 1h 00m, we are targeting a time 4 mins later than the game.
-    // So we subtract 4 minutes from the target.
-    nextReset.setMinutes(nextReset.getMinutes() - 4);
 
     const diff = nextReset - now;
     const hours = Math.floor(diff / (1000 * 60 * 60));

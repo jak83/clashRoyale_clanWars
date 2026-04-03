@@ -20,13 +20,16 @@ function getEmptyHistory() {
 
 function loadHistory() {
     if (!fs.existsSync(HISTORY_FILE)) {
+        console.log('[historyManager] No history file found, starting fresh');
         return getEmptyHistory();
     }
     try {
         const data = fs.readFileSync(HISTORY_FILE, 'utf8');
-        return JSON.parse(data);
+        const parsed = JSON.parse(data);
+        console.log(`[historyManager] Loaded history: sectionIndex=${parsed.sectionIndex}, days=${Object.keys(parsed.days || {}).join(',') || 'none'}`);
+        return parsed;
     } catch (err) {
-        console.error("Error reading history file", err);
+        console.error('[historyManager] ERROR reading history file:', err.message);
         return getEmptyHistory();
     }
 }
@@ -34,13 +37,11 @@ function loadHistory() {
 function saveHistory(history) {
     const tempFile = HISTORY_FILE + '.tmp';
     try {
-        // Write to temp file first
         fs.writeFileSync(tempFile, JSON.stringify(history, null, 2));
-        // Rename temp file to actual file (atomic operation)
         fs.renameSync(tempFile, HISTORY_FILE);
+        console.log(`[historyManager] Saved history: sectionIndex=${history.sectionIndex}, days=${Object.keys(history.days || {}).join(',') || 'none'}`);
     } catch (err) {
-        console.error("Error writing history file", err);
-        // Clean up temp file if it exists
+        console.error('[historyManager] ERROR writing history file:', err.message);
         if (fs.existsSync(tempFile)) {
             try { fs.unlinkSync(tempFile); } catch (e) { }
         }
@@ -48,7 +49,10 @@ function saveHistory(history) {
 }
 
 function updateHistory(raceData, baseHistory = null, save = true) {
-    if (!raceData || !raceData.clan) return baseHistory || loadHistory();
+    if (!raceData || !raceData.clan) {
+        console.warn('[historyManager] updateHistory called with missing raceData or clan');
+        return baseHistory || loadHistory();
+    }
 
     let history = baseHistory || loadHistory();
 
@@ -60,7 +64,7 @@ function updateHistory(raceData, baseHistory = null, save = true) {
     if (save && history.sectionIndex !== null &&
         (history.sectionIndex !== currentSectionIndex || history.seasonId !== currentSeasonId)) {
 
-        console.log(`New war week detected. Archiving old history. Old: ${history.sectionIndex}, New: ${currentSectionIndex}`);
+        console.log(`[historyManager] New war week detected. Archiving sectionIndex=${history.sectionIndex} → ${currentSectionIndex}`);
 
         // Archive Logic
         const dayKeys = Object.keys(history.days).sort();
@@ -73,7 +77,6 @@ function updateHistory(raceData, baseHistory = null, save = true) {
                 return new Date(isoStr).toISOString().split('T')[0];
             };
 
-            // Support both old (no timestamp) and new structures during transition
             const startTs = startDay.timestamp || new Date().toISOString();
             const endTs = endDay.timestamp || new Date().toISOString();
             const dateRange = `${formatDate(startTs)}_${formatDate(endTs)}`;
@@ -83,10 +86,12 @@ function updateHistory(raceData, baseHistory = null, save = true) {
 
             try {
                 fs.writeFileSync(archivePath, JSON.stringify(history, null, 2));
-                console.log(`Archived to ${archivePath}`);
+                console.log(`[historyManager] Archived ${dayKeys.length} days to ${archivePath}`);
             } catch (err) {
-                console.error("Archive failed:", err);
+                console.error('[historyManager] ERROR archiving history:', err.message);
             }
+        } else {
+            console.log('[historyManager] No days to archive, resetting');
         }
 
         history = getEmptyHistory();
@@ -100,8 +105,10 @@ function updateHistory(raceData, baseHistory = null, save = true) {
     // periodIndex % 7: 0-2 Training, 3-6 War Days (Thu-Sun)
     const dayOfWeekIndex = raceData.periodIndex % 7;
 
-    // If not war day, we can exit or maybe log training? User focused on War.
-    if (raceData.periodType !== 'warDay') {
+    // If not war day (or colosseum week), exit early without saving.
+    // Colosseum week uses periodType 'colosseum' but same periodIndex % 7 mapping.
+    if (raceData.periodType !== 'warDay' && raceData.periodType !== 'colosseum') {
+        console.log(`[historyManager] Training day (periodType=${raceData.periodType}), skipping snapshot`);
         return history;
     }
 
@@ -117,10 +124,12 @@ function updateHistory(raceData, baseHistory = null, save = true) {
         players[p.tag] = {
             name: p.name,
             decksUsed: p.decksUsed,
-            decksUsedToday: p.decksUsedToday || 0,  // Daily decks (0-4)
+            decksUsedToday: p.decksUsedToday || 0,
             fame: p.fame
         };
     });
+
+    console.log(`[historyManager] Snapshot: periodType=${raceData.periodType}, warDay=${warDay}, players=${participants.length}`);
 
     // 4. Update History
     history.days[warDay] = {

@@ -9,331 +9,122 @@ A web application that tracks Clash Royale clan war participation by displaying 
 ## Development Commands
 
 ```bash
-# Install Node.js dependencies
-npm install
-
-# One-time Python setup (for Robot Framework e2e tests)
-python -m venv venv
-venv\Scripts\activate
-pip install -r requirements.txt
-
-# Run unit tests (ALWAYS run before committing!)
-npm test
-
-# Run unit tests in watch mode (during development)
-npm run test:watch
-
-# Run e2e tests (requires server to be running)
-npm run test:e2e
-
-# Run all tests (unit + e2e)
-npm run test:all
-
-# Run server (production mode)
-npm start
-
-# Run with auto-reload (development mode)
-npm run dev
+npm install          # Install dependencies
+npm start            # Run server (production)
+npm run dev          # Run with auto-reload (development)
+npm test             # Run all unit tests (ALWAYS run before committing)
+npm run test:watch   # Run unit tests in watch mode
+npm test -- tableSorting  # Run a single test file by name pattern
+npm run test:e2e     # Run Robot Framework e2e tests (requires server running)
+npm run test:all     # Run unit + e2e tests
 ```
 
-**Development Workflow:**
-1. Make changes locally
-2. Run `npm test` to verify unit tests pass
-3. Start server (`npm start`) and run `npm run test:e2e` for e2e verification
-4. Commit changes (only if tests pass)
-5. Deploy with `deploy.bat` (automatically starts server, runs ALL tests, and aborts if any fail)
+**E2E test setup (one-time):**
+```bash
+python -m venv venv && venv\Scripts\activate && pip install -r requirements.txt
+```
 
 Server runs on http://localhost:3000 (or PORT from .env).
 
-## Testing
-
-The project uses a two-tier testing approach:
-
-### Unit Tests (Jest)
-Located in `tests/*.test.js`. Fast, isolated tests that verify:
-- War day calculation logic (Thu=Day1, Fri=Day2, Sat=Day3, Sun=Day4)
-- Training day detection
-- History snapshot management
-- Data parsing and type conversions
-- UI logic and sorting behavior
-
-**Always write unit tests for:**
-- Data parsing logic (string vs number comparisons)
-- Date/day calculations
-- History management functions
-- Any bug fixes (regression tests)
-
-### E2E Tests (Robot Framework)
-Located in `tests/e2e/*.robot`. End-to-end tests that verify the full application:
-- Server startup and health checks
-- API endpoints return correct data structures
-- Background polling system
-- Demo mode functionality
-- Integration between frontend and backend
-
-**Robot Framework Setup:**
-```bash
-# One-time setup
-python -m venv venv
-venv\Scripts\activate
-pip install -r requirements.txt
-```
-
-**Running E2E Tests Manually:**
-```bash
-# Terminal 1: Start server
-npm start
-
-# Terminal 2: Run Robot tests (activate venv first)
-venv\Scripts\activate
-robot --outputdir tests/e2e/results tests/e2e
-```
-
-After tests run, view `tests/e2e/results/report.html` for detailed results.
-
-**Deployment Testing:**
-`deploy.bat` automatically:
-1. Checks venv exists
-2. Starts local server in background
-3. Runs Jest unit tests
-4. Runs Robot Framework e2e tests
-5. Only deploys to production if ALL tests pass
-6. Cleans up server process
-
-This ensures you never deploy broken code to production.
-
-## Environment Setup
-
-Copy `.env.example` to `.env` and configure:
-- `CLASH_API_TOKEN` - Obtain from https://developer.clashroyale.com
-- `CLAN_TAG` - Your clan tag (with or without # prefix)
-- `PORT` - Server port (default: 3000)
-- `HISTORY_PATH` - Optional. Directory path for storing war history snapshots (default: project root). Can be set to a Google Drive synced folder for cloud backup.
-
-## History Data Backup
-
-**Automatic Backups (Production Server):**
-
-The project includes automated backup scripts to protect your war history data:
-
-```bash
-# One-time setup (on Oracle Cloud server)
-cd ~/clashApi
-chmod +x setup_backup.sh
-./setup_backup.sh
-```
-
-This sets up:
-- Daily backups at 2:00 AM to `~/clash-history-backups/`
-- Compressed archives with timestamps: `clash-history-YYYYMMDD_HHMMSS.tar.gz`
-- Automatic cleanup: keeps last 30 days of backups
-- Logs written to `~/clash-backup.log`
-
-**Manual Backup:**
-```bash
-# On server
-./backup_history.sh
-
-# On Windows (local)
-backup_history.bat
-```
-
-**Restore from Backup:**
-```bash
-# Extract backup to temporary location
-tar -xzf ~/clash-history-backups/clash-history-20260213_020000.tar.gz -C /tmp
-
-# Copy to project directory
-cp -r /tmp/ongoing ~/clashApi/
-cp -r /tmp/history ~/clashApi/
-```
-
-**Backup Locations:**
-- Production: `~/clash-history-backups/` (Oracle Cloud server)
-- Local dev: `%USERPROFILE%\clash-history-backups\` (Windows)
-
-**Verify Backup Automation:**
-```bash
-# Run comprehensive status check
-./check_backup_status.sh
-
-# Or check individual components:
-crontab -l | grep backup          # View cron schedule
-ls -lh ~/clash-history-backups/   # List backups
-tail -f ~/clash-backup.log        # Watch backup log
-```
-
-**Cron Job (Automatic Daily Backups):**
-- Runs daily at 2:00 AM regardless of deployments
-- Managed by Linux cron scheduler
-- View schedule: `crontab -l`
-- Disable: `crontab -e` (comment out the backup line with #)
-- Re-enable: Run `./setup_backup.sh` again
-
 ## Architecture
 
+### Data Flow
+
+```
+Clash Royale API
+    │ (polled every 2 min by updateRaceData())
+    ▼
+server.js ──► historyManager.updateHistory() ──► ongoing/history.json
+    │                                              history/WarData_week_*.json
+    │ (in-memory cache: latestRaceData)
+    ▼
+Frontend (public/app.js)
+    ├── GET /api/race          — cached current race status
+    ├── GET /api/race/history  — daily snapshots from historyManager
+    ├── POST /api/players/activity — real-time battle log status
+    └── GET /api/critical-window   — boolean: within 30 min of 5 AM UTC reset
+```
+
 ### Backend (`server.js`)
-Express server with automatic background polling and caching:
 
-**Background Polling System:**
-- Polls Clash Royale API every 2 minutes to fetch current race status
-- Stores latest data in memory cache (`latestRaceData`) for instant UI loads
-- Automatically updates local history snapshots via `historyManager`
+- **Background polling**: `updateRaceData()` runs every 2 minutes, caches result in `latestRaceData`
+- **`/api/players/activity`**: Fetches each player's last 30 battles and classifies them as `active / war-recent / playing / idle / unknown` based on time since last battle
+- **`/api/critical-window`**: Returns `true` if current time is within 30 minutes of the 5 AM UTC daily deck reset
 
-**API Endpoints:**
-- `/api/race` - Returns cached current war status (instant response) or fetches if unavailable
-- `/api/race/log` - Proxies to `/v1/clans/{tag}/riverracelog` (war history from API)
-- `/api/race/history` - Returns locally tracked history snapshots
-- `/api/demo/load` (POST) - Generates synthetic demo data for testing/previews
+### `historyManager.js` — War Week Persistence
 
-The server handles clan tag formatting (prepends `%23` if tag starts with `#`) and adds Bearer token authentication.
+Tracks player deck usage across war days (Thu–Sun) and persists to disk.
 
-### Supporting Modules
+**War day mapping** (from `raceData.periodIndex % 7`):
+- 0–2 = Training days (ignored)
+- 3 = Thursday = War Day 1
+- 4 = Friday = War Day 2
+- 5 = Saturday = War Day 3
+- 6 = Sunday = War Day 4
 
-**`historyManager.js`** - Local war history tracking:
-- Stores daily snapshots of player deck usage during war days (Thu-Sun)
-- Auto-archives completed wars to `history/WarData_week_X_YYYY-MM-DD_YYYY-MM-DD.json`
-- Maintains ongoing war state in `ongoing/history.json`
-- Detects new war weeks (via `seasonId` + `sectionIndex` changes) and archives previous week
-- Configurable storage location via `HISTORY_PATH` environment variable
+**New week detection**: When `seasonId` or `sectionIndex` changes, archives the previous week to `history/WarData_week_{index}_{dateRange}.json` and resets `ongoing/history.json`.
 
-**`demoManager.js`** - Demo data generation:
-- Creates synthetic war data with 10 fictional players
-- Simulates realistic player behavior patterns (e.g., perfect players, inconsistent players)
-- Useful for testing UI and previewing features without real API data
+**Atomic writes**: Saves to a `.tmp` file first, then renames, to prevent corruption.
 
-### Frontend (`public/`)
-Vanilla JavaScript SPA:
-- `index.html` - Layout with summary stats, player lists, and last war section
-- `app.js` - Fetches race data, renders player cards sorted by deck usage
-- `style.css` - Clash Royale themed styling
+**History data shape:**
+```json
+{
+  "seasonId": 1, "sectionIndex": 5,
+  "days": {
+    "1": { "timestamp": "...", "players": { "<tag>": { "name": "...", "decksUsed": 4, "decksUsedToday": 4, "fame": 1200 } } }
+  }
+}
+```
 
-### Key Frontend Logic
-- **War Days**: Shows players sorted by `decksUsedToday` (0-4 decks). Separates incomplete (<4) from complete (≥4) players.
-- **Training Days**: Displays "Training Day" message and automatically loads last war stats showing players with partial deck usage (`decksUsed % 4 !== 0`), useful for identifying who missed specific days.
-- Player list auto-sorts by least decks used first to prioritize who needs to play.
+### `demoManager.js`
 
-### Debug Scripts
-- `debug_race_log.js`, `inspect_log.js`, `inspect_log_deep.js` - Debugging tools for API responses
-- `verify_connection.js` - Tests API connectivity
-These are not part of the main application flow.
+Generates synthetic 10-player war data for UI testing without real API data. Called via `POST /api/demo/load`. Does not write to disk.
 
-## API Integration
+### Frontend (`public/app.js`)
 
-Uses Clash Royale official API (https://api.clashroyale.com/v1). Rate limits apply. The API requires:
-- Bearer token authentication
-- Proper URL encoding of clan tags
-- Accept header: `application/json`
+Vanilla JS SPA (~76KB). Key patterns:
+- **`createPlayerCard()`** and **`createPlayerRow()`** are the single source of truth for player UI components — always update these when changing player display
+- **`PollingTimer`** class tracks the server's 2-minute poll cycle and renders a countdown
+- Tab navigation switches between: Daily History (main table), War Stats, Last War
+- Day filter buttons are generated dynamically from available history data
+- Activity status uses `ACTIVITY_CONFIG` object with 5 states: Active (🟢), War-Recent (🔵), Playing (🟡), Idle (⚪), Unknown (❓)
 
-Data structure: API returns `clan.participants` array with `decksUsedToday` field during war days.
+## Testing
+
+Two-tier approach: Jest unit tests + Robot Framework e2e tests.
+
+### Unit Test Philosophy
+
+Test **behavior/logic**, not DOM structure or implementation details. From `tests/TESTING_GUIDELINES.md`:
+- ✅ Test: calculations, data transforms, sort/filter logic, state transitions, edge cases
+- ❌ Avoid: HTML structure, CSS, DOM queries (`getElementById`, `querySelector`)
+
+Prefer pure function tests over jsdom DOM tests. When writing regression tests for bugs, test the calculation/logic directly.
+
+### Test Files (`tests/*.test.js`)
+
+18 files covering: war day calculation, history snapshots, deck counting, filtering (hide completed, hide left players), sorting, statistics, medal tracking, activity status, countdown timer, reliability metrics, time formatting, and data integrity.
+
+### E2E Tests (`tests/e2e/`)
+
+Robot Framework tests verify server startup, all API endpoints, background polling, and demo mode. Results in `tests/e2e/results/report.html`.
+
+## Environment
+
+Copy `.env.example` to `.env`:
+```
+CLASH_API_TOKEN=your_api_token_here
+CLAN_TAG=#YOUR_CLAN_TAG
+PORT=3000
+HISTORY_PATH=  # Optional: path for history files (e.g., Google Drive folder)
+```
+
+API token obtained from https://developer.clashroyale.com — requires whitelisting the server's IP address.
 
 ## Deployment
 
-For detailed deployment instructions, see the comprehensive guide at `G:\My Drive\clanWars\GOING_LIVE.md`.
+`deploy.bat` runs unit tests + e2e tests and only deploys if all pass. For hosting details and IP whitelisting solutions, see `G:\My Drive\clanWars\GOING_LIVE.md`.
 
-### Quick Deployment Overview
+**Production server** (Oracle Cloud) uses PM2: `pm2 start server.js` / `pm2 logs server`.
 
-**Critical Issue:** Clash Royale API requires whitelisting specific IP addresses - you cannot use `0.0.0.0` or wildcards. This is the main deployment challenge.
-
-**Recommended Hosting Options:**
-
-1. **DigitalOcean Droplet** ($6/month) - Recommended for beginners
-   - Static IP (solves whitelisting issue)
-   - Persistent storage (history preserved)
-   - Simple setup with PM2 process manager
-   - 24/7 uptime guaranteed
-
-2. **Oracle Cloud Free Tier** ($0/month) - Best for free option
-   - Truly free forever (not a trial)
-   - Static IP included
-   - More complex initial setup (~2 hours)
-
-3. **Railway** ($5/month) - Easy GitHub deployment
-   - GitHub auto-deploy on push
-   - Persistent storage
-   - Still requires IP whitelisting solution (RoyaleAPI Proxy)
-
-**NOT Recommended:**
-- **Render Free Tier** - Sleeps after 15 minutes, breaking the 2-minute polling system
-
-### Pre-Deployment Checklist
-
-Before deploying, verify locally:
-```bash
-npm install
-npm start
-# Visit http://localhost:3000 and verify player data loads
-curl http://localhost:3000/api/race
-```
-
-### Deployment Steps (VPS Example)
-
-```bash
-# On server (DigitalOcean, Oracle Cloud, Linode, etc.)
-git clone <your-repo-url>
-cd clashApi
-npm install
-npm install -g pm2
-
-# Create .env file
-nano .env
-# Add: CLASH_API_TOKEN=your_token
-#      CLAN_TAG=#YOUR_TAG
-#      PORT=3000
-
-# Start with PM2
-pm2 start server.js
-pm2 startup  # Auto-restart on reboot
-pm2 save
-```
-
-### IP Whitelisting Solutions
-
-**Option 1: Static IP (Recommended for VPS)**
-1. Deploy to VPS (DigitalOcean, Oracle Cloud, etc.)
-2. Get server IP: `curl ifconfig.me`
-3. Whitelist IP at https://developer.clashroyale.com
-4. Add token to `.env` as `CLASH_API_TOKEN`
-
-**Option 2: RoyaleAPI Proxy (For dynamic IP platforms)**
-- Use RoyaleAPI's proxy service instead of direct API calls
-- Modify `server.js` to use `https://proxy.royaleapi.dev/v1/...`
-- See GOING_LIVE.md for code examples
-
-### Common Deployment Issues
-
-**403 Forbidden Error:**
-- Cause: Server IP not whitelisted
-- Fix: Run `curl ifconfig.me` on server, add IP at developer.clashroyale.com
-
-**Polling Stopped:**
-- Check server status: `pm2 list`
-- View logs: `pm2 logs server`
-- Restart if needed: `pm2 restart server`
-
-**History Lost After Restart:**
-- Cause: Using ephemeral storage (Render free tier)
-- Fix: Use VPS with persistent storage or set up Google Drive sync via `HISTORY_PATH`
-
-### Verification After Deployment
-
-```bash
-# Check server is running
-pm2 list
-
-# Test API endpoint (replace YOUR_URL)
-curl https://YOUR_URL/api/race
-
-# Verify polling in logs
-pm2 logs server
-# Should see: "[time] Polling Clash Royale API..." every 2 minutes
-```
-
-### Cost Summary
-
-- **Free:** Oracle Cloud ($0) - requires credit card but won't charge
-- **Paid:** DigitalOcean ($6/month) or Railway ($5/month)
-- **Domain (optional):** $12/year (~$1/month)
-- **API Token:** Free from Clash Royale
-
-See GOING_LIVE.md for complete setup instructions, troubleshooting guide, and Google Drive sync configuration.
+History backups run daily at 2 AM via cron (`./setup_backup.sh` to configure). See `backup_history.sh` for manual backup.

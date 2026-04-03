@@ -3,6 +3,7 @@ const express = require('express');
 const axios = require('axios');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 const historyManager = require('./historyManager');
 
 const app = express();
@@ -15,6 +16,32 @@ app.use(express.static('public'));
 
 // In-memory cache for fast UI loading
 let latestRaceData = null;
+
+// --- Reset time auto-detection ---
+// We detect the daily deck reset by watching for periodIndex to increment.
+// The observed timestamp is stored so the countdown stays accurate without hardcoding.
+const ONGOING_DIR = path.join(process.env.HISTORY_PATH || __dirname, 'ongoing');
+const RESET_TIME_FILE = path.join(ONGOING_DIR, 'reset_time.json');
+
+let lastKnownPeriodIndex = null;
+let lastResetTimestamp = null;   // Unix ms of the most recently observed reset
+
+try {
+    if (fs.existsSync(RESET_TIME_FILE)) {
+        const saved = JSON.parse(fs.readFileSync(RESET_TIME_FILE, 'utf8'));
+        lastResetTimestamp = saved.lastResetTimestamp || null;
+        lastKnownPeriodIndex = saved.lastKnownPeriodIndex || null;
+    }
+} catch (e) { /* start fresh */ }
+
+function getNextResetTimestamp() {
+    if (!lastResetTimestamp) return null;
+    const oneDayMs = 24 * 60 * 60 * 1000;
+    let next = lastResetTimestamp;
+    const now = Date.now();
+    while (next <= now) next += oneDayMs;
+    return next;
+}
 
 async function updateRaceData() {
     console.log(`[${new Date().toLocaleTimeString()}] Polling Clash Royale API...`);
@@ -36,6 +63,19 @@ async function updateRaceData() {
                 'Accept': 'application/json'
             }
         });
+
+        // Detect daily reset: periodIndex increments by 1 each day at reset time
+        const newPeriodIndex = response.data.periodIndex;
+        if (lastKnownPeriodIndex !== null && newPeriodIndex > lastKnownPeriodIndex) {
+            lastResetTimestamp = Date.now();
+            console.log(`[Reset detected] periodIndex ${lastKnownPeriodIndex} → ${newPeriodIndex} at ${new Date().toISOString()}`);
+        }
+        if (newPeriodIndex !== lastKnownPeriodIndex) {
+            lastKnownPeriodIndex = newPeriodIndex;
+            try {
+                fs.writeFileSync(RESET_TIME_FILE, JSON.stringify({ lastResetTimestamp, lastKnownPeriodIndex }));
+            } catch (e) { console.error('Failed to save reset time:', e.message); }
+        }
 
         latestRaceData = response.data;
 
@@ -258,26 +298,30 @@ function parseBattleTime(battleTimeStr) {
  */
 function isInCriticalWindow() {
     const now = new Date();
-    const nextReset = new Date(now);
+    const nextReset = getNextResetTimestamp();
 
-    // Set to 5:00 AM UTC
-    nextReset.setUTCHours(5, 0, 0, 0);
-
-    // If we're past 5 AM today, move to tomorrow
-    if (now.getUTCHours() >= 5) {
-        nextReset.setUTCDate(nextReset.getUTCDate() + 1);
+    let target;
+    if (nextReset) {
+        target = new Date(nextReset);
+    } else {
+        // Fallback until first reset is observed
+        target = new Date(now);
+        target.setUTCHours(9, 46, 0, 0);
+        if (now >= target) target.setUTCDate(target.getUTCDate() + 1);
     }
 
-    // Subtract 4 minutes to match game clock
-    nextReset.setMinutes(nextReset.getMinutes() - 4);
-
-    const minutesUntilReset = Math.floor((nextReset - now) / (1000 * 60));
+    const minutesUntilReset = Math.floor((target - now) / (1000 * 60));
     return minutesUntilReset <= 30;
 }
 
 // Endpoint to check if we're in critical window
 app.get('/api/critical-window', (req, res) => {
     res.json({ inCriticalWindow: isInCriticalWindow() });
+});
+
+// Expose next reset timestamp so the frontend can show an accurate countdown
+app.get('/api/reset-time', (req, res) => {
+    res.json({ nextResetTimestamp: getNextResetTimestamp() });
 });
 
 // Demo Endpoint

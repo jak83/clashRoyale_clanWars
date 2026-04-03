@@ -1,0 +1,3 @@
+{
+  "ignore": ["ongoing/", "history/", "*.json", "tests/"]
+}
