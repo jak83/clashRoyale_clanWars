@@ -171,7 +171,7 @@ app.post('/api/clans', async (req, res) => {
         const clanInfo = response.data;
         const id = clanConfig.tagToId(clanInfo.tag);
 
-        const newClan = clanConfig.addClan({ id, tag: clanInfo.tag });
+        const newClan = clanConfig.addClan({ id, tag: clanInfo.tag, name: clanInfo.name });
         initClanState(newClan);
         updateRaceData(newClan); // Kick off first poll immediately
 

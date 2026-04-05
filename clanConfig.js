@@ -43,7 +43,7 @@ function tagToId(tag) {
 
 /** Serialize current clans to disk (strips apiToken — that lives in .env) */
 function saveToDisk(clans) {
-    const toSave = clans.map(({ id, tag }) => ({ id, tag }));
+    const toSave = clans.map(({ id, tag, name }) => name ? { id, tag, name } : { id, tag });
     fs.writeFileSync(CONFIG_PATH, JSON.stringify(toSave, null, 2));
 }
 

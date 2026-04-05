@@ -530,7 +530,14 @@ function createPlayerRow(player, options) {
         let decksTotal = currP ? currP.decksUsed : 0;
         let decksPrev = prevP ? prevP.decksUsed : 0;
 
-        let dailyDecks = decksTotal - decksPrev;
+        let dailyDecks;
+        if (prevDayObj !== null) {
+            // Previous day data exists — compute difference from cumulative
+            dailyDecks = decksTotal - decksPrev;
+        } else {
+            // No previous day — use decksUsedToday to avoid treating cumulative total as daily
+            dailyDecks = currP ? (currP.decksUsedToday ?? decksTotal) : 0;
+        }
         if (dailyDecks < 0) dailyDecks = 0;
         if (dailyDecks < 4) isPerfectPlayer = false;
 
@@ -1444,7 +1451,9 @@ async function renderHistory(history, currentMemberTags = []) {
 
                 const currentDecks = player.decksUsed || 0;
                 const prevDecks = prevPlayer ? (prevPlayer.decksUsed || 0) : 0;
-                const dailyDecks = Math.max(0, currentDecks - prevDecks);
+                const dailyDecks = prevDayObj !== null
+                    ? Math.max(0, currentDecks - prevDecks)
+                    : Math.max(0, player.decksUsedToday ?? currentDecks);
                 totalForPlayer += dailyDecks;
             }
         });
@@ -1491,6 +1500,16 @@ async function renderHistory(history, currentMemberTags = []) {
     });
 
     table.appendChild(tbody);
+
+    // Warn when tracking started mid-war (Day 1 data is missing)
+    const firstDay = parseInt(days[0]);
+    if (firstDay > 1) {
+        const banner = document.createElement('div');
+        banner.className = 'incomplete-history-banner';
+        banner.innerHTML = `⚠️ Tracking started on Day ${firstDay} — Days 1–${firstDay - 1} are not available for this clan.`;
+        container.appendChild(banner);
+    }
+
     container.appendChild(table);
 
     // Add sorting functionality to headers
