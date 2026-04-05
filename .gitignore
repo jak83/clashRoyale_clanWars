@@ -16,6 +16,7 @@ output.xml
 # Data folders
 history/
 ongoing/
+clans/
 *.json
 !package.json
 !package-lock.json

@@ -26,6 +26,34 @@
             <p class="header-subtitle">Next update: <span id="next-poll-timer" class="highlight">--</span></p>
         </header>
 
+        <!-- Clan Switcher (hidden until JS confirms multiple clans) -->
+        <div id="clan-switcher" class="clan-switcher" style="display:none;">
+            <label for="clan-select">Clan:</label>
+            <select id="clan-select"></select>
+            <button id="manage-clans-btn" class="manage-clans-btn" title="Manage clans">⚙</button>
+        </div>
+
+        <!-- Manage Clans Modal -->
+        <div id="manage-clans-modal" class="modal-overlay" style="display:none;">
+            <div class="modal-box">
+                <div class="modal-header">
+                    <h2>Manage Clans</h2>
+                    <button id="manage-clans-close" class="modal-close-btn">✕</button>
+                </div>
+                <div id="clans-list" class="clans-list">
+                    <!-- Populated by JS -->
+                </div>
+                <div class="add-clan-form">
+                    <h3>Add Clan</h3>
+                    <div class="add-clan-row">
+                        <input id="add-clan-tag" type="text" placeholder="#CLAN_TAG" class="clan-tag-input" />
+                        <button id="add-clan-btn" class="action-btn">Add</button>
+                    </div>
+                    <div id="add-clan-status" class="add-clan-status"></div>
+                </div>
+            </div>
+        </div>
+
         <main>
             <!-- Navigation Tabs -->
             <div class="tabs" data-testid="navigation-tabs">

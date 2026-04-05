@@ -4,6 +4,185 @@ let countdownInterval = null;
 // Cached next reset timestamp from server (null until first fetch)
 let nextResetTimestamp = null;
 
+// Active clan ID — null means use server default (first configured clan)
+let activeClanId = null;
+
+/**
+ * Appends the active clan's ID to a URL as a query parameter.
+ * Returns the URL unchanged when using the server default clan.
+ * Example: appendClanParam('/api/race?force=true') → '/api/race?force=true&clanId=junior'
+ */
+function appendClanParam(url) {
+    if (!activeClanId) return url;
+    const sep = url.includes('?') ? '&' : '?';
+    return `${url}${sep}clanId=${encodeURIComponent(activeClanId)}`;
+}
+
+/**
+ * Fetch the list of configured clans and populate the clan switcher.
+ * The switcher is only shown when multiple clans are available.
+ */
+async function fetchClans() {
+    try {
+        const response = await fetch('/api/clans');
+        if (!response.ok) return;
+        const clans = await response.json();
+
+        if (!Array.isArray(clans) || clans.length === 0) return;
+
+        // Set default to first clan
+        if (!activeClanId) activeClanId = clans[0].id;
+
+        const switcher = document.getElementById('clan-switcher');
+        const select = document.getElementById('clan-select');
+        if (!switcher || !select) return;
+
+        select.innerHTML = clans.map(c =>
+            `<option value="${c.id}"${c.id === activeClanId ? ' selected' : ''}>${c.name || c.tag}</option>`
+        ).join('');
+
+        // Always show the bar (for the gear button); hide the dropdown when only one clan
+        switcher.style.display = '';
+        select.style.display = clans.length > 1 ? '' : 'none';
+
+        if (clans.length > 1) {
+            select.addEventListener('change', (e) => {
+                activeClanId = e.target.value;
+                refreshActiveTab();
+            });
+        }
+    } catch (e) {
+        console.error('fetchClans error:', e);
+    }
+}
+
+// --- Manage Clans Modal ---
+
+function openManageClansModal() {
+    const modal = document.getElementById('manage-clans-modal');
+    if (!modal) return;
+    renderClansList();
+    modal.style.display = 'flex';
+    document.getElementById('add-clan-tag').value = '';
+    document.getElementById('add-clan-status').textContent = '';
+}
+
+function closeManageClansModal() {
+    const modal = document.getElementById('manage-clans-modal');
+    if (modal) modal.style.display = 'none';
+}
+
+async function renderClansList() {
+    const list = document.getElementById('clans-list');
+    if (!list) return;
+
+    try {
+        const res = await fetch('/api/clans');
+        const clans = await res.json();
+
+        if (!clans.length) {
+            list.innerHTML = '<p class="no-clans-msg">No clans configured.</p>';
+            return;
+        }
+
+        list.innerHTML = clans.map(c => `
+            <div class="clan-list-row">
+                <span class="clan-list-name">${c.name || c.tag}</span>
+                <span class="clan-list-tag">${c.tag}</span>
+                <button class="remove-clan-btn action-btn"
+                        data-id="${c.id}"
+                        ${clans.length <= 1 ? 'disabled title="Cannot remove the last clan"' : ''}>
+                    Remove
+                </button>
+            </div>
+        `).join('');
+
+        list.querySelectorAll('.remove-clan-btn:not([disabled])').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                btn.disabled = true;
+                btn.textContent = 'Removing…';
+                const id = btn.dataset.id;
+                try {
+                    const r = await fetch(`/api/clans/${encodeURIComponent(id)}`, { method: 'DELETE' });
+                    if (!r.ok) {
+                        const err = await r.json();
+                        alert(err.error || 'Failed to remove clan');
+                        btn.disabled = false;
+                        btn.textContent = 'Remove';
+                        return;
+                    }
+                    // If we removed the active clan, switch to default
+                    if (activeClanId === id) activeClanId = null;
+                    await fetchClans();
+                    refreshActiveTab();
+                    renderClansList();
+                } catch (e) {
+                    alert('Failed to remove clan');
+                    btn.disabled = false;
+                    btn.textContent = 'Remove';
+                }
+            });
+        });
+    } catch (e) {
+        list.innerHTML = '<p class="error-text">Failed to load clans.</p>';
+    }
+}
+
+async function addClanFromUI() {
+    const input = document.getElementById('add-clan-tag');
+    const status = document.getElementById('add-clan-status');
+    const btn = document.getElementById('add-clan-btn');
+    const tag = input.value.trim();
+
+    if (!tag) {
+        status.textContent = 'Enter a clan tag.';
+        status.className = 'add-clan-status error';
+        return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Adding…';
+    status.textContent = 'Verifying clan…';
+    status.className = 'add-clan-status';
+
+    try {
+        const res = await fetch('/api/clans', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tag })
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+            status.textContent = data.error || 'Failed to add clan.';
+            status.className = 'add-clan-status error';
+            return;
+        }
+
+        status.textContent = `Added: ${data.name} (${data.tag})`;
+        status.className = 'add-clan-status success';
+        input.value = '';
+        await fetchClans();
+        renderClansList();
+    } catch (e) {
+        status.textContent = 'Network error. Try again.';
+        status.className = 'add-clan-status error';
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Add';
+    }
+}
+
+function refreshActiveTab() {
+    const activeBtn = document.querySelector('.tab-btn.active');
+    if (!activeBtn) return;
+    const tab = activeBtn.dataset.tab;
+    if (tab === 'history') fetchHistory();
+    else if (tab === 'war-stats') fetchWarStats();
+    else if (tab === 'last-war') fetchRaceData().then(data => { if (data && data.clan) fetchLastWarLog(data.clan.tag); });
+    else if (tab === 'viikkoskabat') fetchViikkoskabat();
+}
+
 /**
  * Reusable Polling Timer Utility
  * Tracks when the server will poll the API next and provides countdown
@@ -88,7 +267,7 @@ const ACTIVITY_CONFIG = {
  */
 async function checkCriticalWindow() {
     try {
-        const response = await fetch('/api/critical-window');
+        const response = await fetch(appendClanParam('/api/critical-window'));
         const data = await response.json();
         return data.inCriticalWindow;
     } catch (error) {
@@ -109,7 +288,7 @@ async function fetchPlayerActivity(playerTags) {
         const response = await fetch('/api/players/activity', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ playerTags })
+            body: JSON.stringify({ playerTags, clanId: activeClanId || undefined })
         });
 
         if (!response.ok) {
@@ -568,7 +747,8 @@ function updatePlayerCount() {
     countElement.textContent = `${visibleRows.length} player${visibleRows.length !== 1 ? 's' : ''} shown`;
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    await fetchClans();  // Must resolve before any clan-specific fetches
     fetchResetTime();
     // Load history by default
     fetchHistory();
@@ -707,28 +887,44 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize header polling countdown timer
     PollingTimer.updateElement('next-poll-timer');
     setInterval(() => PollingTimer.updateElement('next-poll-timer'), 1000);
+
+    // Manage Clans Modal
+    const manageBtn = document.getElementById('manage-clans-btn');
+    const closeBtn = document.getElementById('manage-clans-close');
+    const modal = document.getElementById('manage-clans-modal');
+    if (manageBtn) manageBtn.addEventListener('click', openManageClansModal);
+    if (closeBtn) closeBtn.addEventListener('click', closeManageClansModal);
+    if (modal) modal.addEventListener('click', (e) => { if (e.target === modal) closeManageClansModal(); });
+
+    const addBtn = document.getElementById('add-clan-btn');
+    if (addBtn) addBtn.addEventListener('click', addClanFromUI);
+
+    const tagInput = document.getElementById('add-clan-tag');
+    if (tagInput) tagInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') addClanFromUI(); });
 });
 
 // --- Viikkoskabat ---
-const VIIKKOSKABAT_KEY = 'viikkoskabat_selected';
+function getViikkoskabatKey() {
+    return `viikkoskabat_selected${activeClanId ? '_' + activeClanId : ''}`;
+}
 
 function loadSelectedPlayers() {
     try {
-        return JSON.parse(localStorage.getItem(VIIKKOSKABAT_KEY) || '[]');
+        return JSON.parse(localStorage.getItem(getViikkoskabatKey()) || '[]');
     } catch (e) {
         return [];
     }
 }
 
 function saveSelectedPlayers(tags) {
-    localStorage.setItem(VIIKKOSKABAT_KEY, JSON.stringify(tags));
+    localStorage.setItem(getViikkoskabatKey(), JSON.stringify(tags));
 }
 
 async function fetchViikkoskabat() {
     try {
         const [historyResponse, membersResponse] = await Promise.all([
-            fetch('/api/race/history'),
-            fetch('/api/clan/members')
+            fetch(appendClanParam('/api/race/history')),
+            fetch(appendClanParam('/api/clan/members'))
         ]);
 
         const history = historyResponse.ok ? await historyResponse.json() : { days: {} };
@@ -788,7 +984,7 @@ function renderViikkoskabatStats(history, allPlayers) {
 
     // Get history from last render if not passed (after checkbox change)
     if (!history) {
-        fetch('/api/race/history')
+        fetch(appendClanParam('/api/race/history'))
             .then(r => r.json())
             .then(h => renderViikkoskabatStats(h, allPlayers))
             .catch(() => {});
@@ -859,8 +1055,8 @@ async function fetchHistory(force = false) {
     try {
         // Fetch both history and current clan members
         const [historyResponse, membersResponse] = await Promise.all([
-            fetch(`/api/race/history${force ? '?force=true' : ''}`),
-            fetch('/api/clan/members')
+            fetch(appendClanParam(`/api/race/history${force ? '?force=true' : ''}`)),
+            fetch(appendClanParam('/api/clan/members'))
         ]);
 
         if (!historyResponse.ok) throw new Error('Failed to fetch history');
@@ -890,8 +1086,8 @@ async function fetchWarStats(force = false) {
 
     try {
         const [raceResponse, logResponse] = await Promise.all([
-            fetch(`/api/race${force ? '?force=true' : ''}`),
-            fetch('/api/race/log')
+            fetch(appendClanParam(`/api/race${force ? '?force=true' : ''}`)),
+            fetch(appendClanParam('/api/race/log'))
         ]);
 
         if (!raceResponse.ok || !logResponse.ok) {
@@ -910,7 +1106,7 @@ async function fetchWarStats(force = false) {
 
 async function fetchResetTime() {
     try {
-        const response = await fetch('/api/reset-time');
+        const response = await fetch(appendClanParam('/api/reset-time'));
         const data = await response.json();
         if (data.nextResetTimestamp) {
             nextResetTimestamp = data.nextResetTimestamp;
@@ -1134,7 +1330,15 @@ async function renderHistory(history, currentMemberTags = []) {
     let playerActivityMap = {};
 
     if (!history || !history.days || Object.keys(history.days).length === 0) {
-        container.innerHTML = '<div class="training-message">No history data allocated yet. Wait for API updates.</div>';
+        container.innerHTML = `
+            <div class="training-message" style="padding: 2rem; text-align: center;">
+                <div style="font-size: 1.5rem; margin-bottom: 0.75rem;">📭</div>
+                <div style="font-weight: 600; margin-bottom: 0.5rem;">No history yet for this clan</div>
+                <div style="color: var(--text-secondary); font-size: 0.9rem;">
+                    History is collected automatically during war days (Thu–Sun).<br>
+                    Data will appear here after the next API poll.
+                </div>
+            </div>`;
         return;
     }
 
@@ -1918,7 +2122,7 @@ async function fetchRaceData() {
     if (statusEl) statusEl.textContent = 'Loading...';
 
     try {
-        const response = await fetch('/api/race');
+        const response = await fetch(appendClanParam('/api/race'));
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -1948,7 +2152,7 @@ async function fetchLastWarLog(clanTag) {
     list.innerHTML = '<div class="loading-text">Loading last war stats...</div>';
 
     try {
-        const response = await fetch('/api/race/log');
+        const response = await fetch(appendClanParam('/api/race/log'));
         if (!response.ok) throw new Error('Failed to fetch log');
         const data = await response.json();
         renderLastWarLog(data, clanTag);

@@ -177,4 +177,60 @@ describe('historyManager', () => {
       expect(Object.keys(history.days).length).toBe(2);
     });
   });
+
+  describe('clanId parameter', () => {
+    const makeRaceData = (sectionIndex = 1, periodIndex = 3) => ({
+      seasonId: 1,
+      sectionIndex,
+      periodIndex,
+      periodType: 'warDay',
+      clan: {
+        participants: [
+          { tag: '#P1', name: 'Player1', decksUsed: 2, decksUsedToday: 2, fame: 200 }
+        ]
+      }
+    });
+
+    test('clanId does not affect returned data shape', () => {
+      const histA = historyManager.updateHistory(makeRaceData(), null, false, 'clan-a');
+      const histB = historyManager.updateHistory(makeRaceData(), null, false, 'clan-b');
+
+      expect(histA.days[1].players['#P1'].decksUsed).toBe(2);
+      expect(histB.days[1].players['#P1'].decksUsed).toBe(2);
+    });
+
+    test('two clans with different base histories remain independent', () => {
+      const baseA = { seasonId: 1, sectionIndex: 1, days: { 1: { timestamp: 't', players: { '#A': { name: 'Alpha', decksUsed: 4, decksUsedToday: 4, fame: 400 } } } } };
+      const baseB = { seasonId: 1, sectionIndex: 1, days: {} };
+
+      const histA = historyManager.updateHistory(makeRaceData(1, 4), baseA, false, 'clan-a');
+      const histB = historyManager.updateHistory(makeRaceData(1, 4), baseB, false, 'clan-b');
+
+      // clan-a has day 1 data carried over; clan-b does not
+      expect(histA.days[1]).toBeDefined();
+      expect(histB.days[1]).toBeUndefined();
+    });
+
+    test('omitting clanId defaults to "default" behaviour (same result as explicit default)', () => {
+      const raceData = makeRaceData();
+      const withDefault = historyManager.updateHistory(raceData, null, false, 'default');
+      const withOmitted = historyManager.updateHistory(raceData, null, false);
+
+      expect(withDefault.days[1].players['#P1']).toEqual(withOmitted.days[1].players['#P1']);
+    });
+
+    test('new week detection works per-clan independently', () => {
+      // clan-a has old sectionIndex in its history
+      const oldHistory = { seasonId: 1, sectionIndex: 5, days: { 1: { timestamp: 't', players: {} } } };
+      // New race data has sectionIndex 6 — should trigger archive+reset
+      // With save=false, archiving is skipped but history still resets
+      const newRace = { ...makeRaceData(6, 3), sectionIndex: 6 };
+
+      const result = historyManager.updateHistory(newRace, oldHistory, false, 'clan-a');
+
+      // After week reset, old days are gone and new sectionIndex is set
+      expect(result.sectionIndex).toBe(6);
+      expect(Object.keys(result.days).length).toBeLessThanOrEqual(1); // only new day 1
+    });
+  });
 });

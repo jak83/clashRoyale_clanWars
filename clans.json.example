@@ -1,0 +1,10 @@
+[
+  {
+    "id": "main",
+    "tag": "#YOUR_CLAN_TAG"
+  },
+  {
+    "id": "junior",
+    "tag": "#ANOTHER_TAG"
+  }
+]

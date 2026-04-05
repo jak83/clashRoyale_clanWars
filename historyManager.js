@@ -1,14 +1,32 @@
 const fs = require('fs');
 const path = require('path');
 
-const BASE_STORAGE = process.env.HISTORY_PATH || __dirname;
-const ONGOING_DIR = path.join(BASE_STORAGE, 'ongoing');
-const HISTORY_DIR = path.join(BASE_STORAGE, 'history');
-const HISTORY_FILE = path.join(ONGOING_DIR, 'history.json');
+/**
+ * Resolve storage paths for a given clan.
+ * For 'default' (legacy single-clan mode), paths are the same as before:
+ *   ongoing/history.json and history/WarData_week_*.json
+ * For named clans:
+ *   clans/{clanId}/ongoing/history.json and clans/{clanId}/history/WarData_week_*.json
+ */
+function getStoragePaths(clanId = 'default') {
+    const base = process.env.HISTORY_PATH || __dirname;
+    const clanDir = (!clanId || clanId === 'default')
+        ? base
+        : path.join(base, 'clans', clanId);
+    return {
+        ongoingDir: path.join(clanDir, 'ongoing'),
+        historyDir: path.join(clanDir, 'history'),
+        historyFile: path.join(clanDir, 'ongoing', 'history.json'),
+    };
+}
 
-// Ensure directories exist
-if (!fs.existsSync(ONGOING_DIR)) fs.mkdirSync(ONGOING_DIR);
-if (!fs.existsSync(HISTORY_DIR)) fs.mkdirSync(HISTORY_DIR);
+function ensureDirs(paths) {
+    if (!fs.existsSync(paths.ongoingDir)) fs.mkdirSync(paths.ongoingDir, { recursive: true });
+    if (!fs.existsSync(paths.historyDir)) fs.mkdirSync(paths.historyDir, { recursive: true });
+}
+
+// Ensure default clan directories exist at startup (backward compat)
+ensureDirs(getStoragePaths('default'));
 
 function getEmptyHistory() {
     return {
@@ -18,43 +36,46 @@ function getEmptyHistory() {
     };
 }
 
-function loadHistory() {
-    if (!fs.existsSync(HISTORY_FILE)) {
-        console.log('[historyManager] No history file found, starting fresh');
+function loadHistory(clanId = 'default') {
+    const paths = getStoragePaths(clanId);
+    if (!fs.existsSync(paths.historyFile)) {
+        console.log(`[historyManager] No history file found for clan '${clanId}', starting fresh`);
         return getEmptyHistory();
     }
     try {
-        const data = fs.readFileSync(HISTORY_FILE, 'utf8');
+        const data = fs.readFileSync(paths.historyFile, 'utf8');
         const parsed = JSON.parse(data);
-        console.log(`[historyManager] Loaded history: sectionIndex=${parsed.sectionIndex}, days=${Object.keys(parsed.days || {}).join(',') || 'none'}`);
+        console.log(`[historyManager] Loaded history for clan '${clanId}': sectionIndex=${parsed.sectionIndex}, days=${Object.keys(parsed.days || {}).join(',') || 'none'}`);
         return parsed;
     } catch (err) {
-        console.error('[historyManager] ERROR reading history file:', err.message);
+        console.error(`[historyManager] ERROR reading history file for clan '${clanId}':`, err.message);
         return getEmptyHistory();
     }
 }
 
-function saveHistory(history) {
-    const tempFile = HISTORY_FILE + '.tmp';
+function saveHistory(history, clanId = 'default') {
+    const paths = getStoragePaths(clanId);
+    ensureDirs(paths);
+    const tempFile = paths.historyFile + '.tmp';
     try {
         fs.writeFileSync(tempFile, JSON.stringify(history, null, 2));
-        fs.renameSync(tempFile, HISTORY_FILE);
-        console.log(`[historyManager] Saved history: sectionIndex=${history.sectionIndex}, days=${Object.keys(history.days || {}).join(',') || 'none'}`);
+        fs.renameSync(tempFile, paths.historyFile);
+        console.log(`[historyManager] Saved history for clan '${clanId}': sectionIndex=${history.sectionIndex}, days=${Object.keys(history.days || {}).join(',') || 'none'}`);
     } catch (err) {
-        console.error('[historyManager] ERROR writing history file:', err.message);
+        console.error(`[historyManager] ERROR writing history file for clan '${clanId}':`, err.message);
         if (fs.existsSync(tempFile)) {
             try { fs.unlinkSync(tempFile); } catch (e) { }
         }
     }
 }
 
-function updateHistory(raceData, baseHistory = null, save = true) {
+function updateHistory(raceData, baseHistory = null, save = true, clanId = 'default') {
     if (!raceData || !raceData.clan) {
         console.warn('[historyManager] updateHistory called with missing raceData or clan');
-        return baseHistory || loadHistory();
+        return baseHistory || loadHistory(clanId);
     }
 
-    let history = baseHistory || loadHistory();
+    let history = baseHistory || loadHistory(clanId);
 
     const currentSeasonId = raceData.seasonId;
     const currentSectionIndex = raceData.sectionIndex;
@@ -64,9 +85,12 @@ function updateHistory(raceData, baseHistory = null, save = true) {
     if (save && history.sectionIndex !== null &&
         (history.sectionIndex !== currentSectionIndex || history.seasonId !== currentSeasonId)) {
 
-        console.log(`[historyManager] New war week detected. Archiving sectionIndex=${history.sectionIndex} → ${currentSectionIndex}`);
+        console.log(`[historyManager] New war week detected for clan '${clanId}'. Archiving sectionIndex=${history.sectionIndex} → ${currentSectionIndex}`);
 
         // Archive Logic
+        const paths = getStoragePaths(clanId);
+        ensureDirs(paths);
+
         const dayKeys = Object.keys(history.days).sort();
         if (dayKeys.length > 0) {
             const startDay = history.days[dayKeys[0]];
@@ -82,7 +106,7 @@ function updateHistory(raceData, baseHistory = null, save = true) {
             const dateRange = `${formatDate(startTs)}_${formatDate(endTs)}`;
 
             const archiveName = `WarData_week_${history.sectionIndex}_${dateRange}.json`;
-            const archivePath = path.join(HISTORY_DIR, archiveName);
+            const archivePath = path.join(paths.historyDir, archiveName);
 
             try {
                 fs.writeFileSync(archivePath, JSON.stringify(history, null, 2));
@@ -129,7 +153,7 @@ function updateHistory(raceData, baseHistory = null, save = true) {
         };
     });
 
-    console.log(`[historyManager] Snapshot: periodType=${raceData.periodType}, warDay=${warDay}, players=${participants.length}`);
+    console.log(`[historyManager] Snapshot for clan '${clanId}': periodType=${raceData.periodType}, warDay=${warDay}, players=${participants.length}`);
 
     // 4. Update History
     history.days[warDay] = {
@@ -138,7 +162,7 @@ function updateHistory(raceData, baseHistory = null, save = true) {
     };
 
     if (save) {
-        saveHistory(history);
+        saveHistory(history, clanId);
     }
 
     return history;
