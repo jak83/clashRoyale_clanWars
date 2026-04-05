@@ -25,9 +25,10 @@ function loadClans() {
 
     // Fallback to .env for single-clan operators.
     // Use id 'default' so existing data at ongoing/history.json is preserved.
+    // Mark as protected so it cannot be removed via the UI.
     const tag = process.env.CLAN_TAG;
     if (tag && sharedToken) {
-        _clans = [{ id: 'default', name: tag, tag, apiToken: sharedToken }];
+        _clans = [{ id: 'default', name: tag, tag, apiToken: sharedToken, protected: true }];
         console.log('[clanConfig] Using single clan from .env (legacy mode)');
     } else {
         _clans = [];
@@ -43,7 +44,12 @@ function tagToId(tag) {
 
 /** Serialize current clans to disk (strips apiToken — that lives in .env) */
 function saveToDisk(clans) {
-    const toSave = clans.map(({ id, tag, name }) => name ? { id, tag, name } : { id, tag });
+    const toSave = clans.map(({ id, tag, name, protected: p }) => {
+        const entry = { id, tag };
+        if (name) entry.name = name;
+        if (p) entry.protected = true;
+        return entry;
+    });
     fs.writeFileSync(CONFIG_PATH, JSON.stringify(toSave, null, 2));
 }
 

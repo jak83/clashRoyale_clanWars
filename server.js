@@ -134,10 +134,10 @@ setInterval(() => {
 // List all configured clans (never exposes apiToken)
 // Returns live clan name from API cache when available, falling back to config name/tag
 app.get('/api/clans', (req, res) => {
-    const clans = clanConfig.getAllClans().map(({ id, name, tag }) => {
+    const clans = clanConfig.getAllClans().map(({ id, name, tag, protected: p }) => {
         const state = clanCache.get(id);
         const liveName = state?.latestRaceData?.clan?.name;
-        return { id, name: liveName || name || tag, tag };
+        return { id, name: liveName || name || tag, tag, protected: p || false };
     });
     res.json(clans);
 });
@@ -194,6 +194,11 @@ app.delete('/api/clans/:id', (req, res) => {
 
     if (clanConfig.getAllClans().length <= 1) {
         return res.status(400).json({ error: 'Cannot remove the last clan' });
+    }
+
+    const clan = clanConfig.getClanById(id);
+    if (clan?.protected) {
+        return res.status(403).json({ error: `'${clan.name || clan.tag}' is a protected clan and cannot be removed` });
     }
 
     try {

@@ -85,17 +85,21 @@ async function renderClansList() {
             return;
         }
 
-        list.innerHTML = clans.map(c => `
+        list.innerHTML = clans.map(c => {
+            const isDisabled = c.protected || clans.length <= 1;
+            const title = c.protected
+                ? 'This clan is protected and cannot be removed'
+                : clans.length <= 1 ? 'Cannot remove the last clan' : '';
+            return `
             <div class="clan-list-row">
                 <span class="clan-list-name">${c.name || c.tag}</span>
                 <span class="clan-list-tag">${c.tag}</span>
-                <button class="remove-clan-btn action-btn"
-                        data-id="${c.id}"
-                        ${clans.length <= 1 ? 'disabled title="Cannot remove the last clan"' : ''}>
-                    Remove
-                </button>
-            </div>
-        `).join('');
+                ${c.protected
+                    ? `<span class="clan-protected-badge" title="${title}">🔒</span>`
+                    : `<button class="remove-clan-btn action-btn" data-id="${c.id}" ${isDisabled ? `disabled title="${title}"` : ''}>Remove</button>`
+                }
+            </div>`;
+        }).join('');
 
         list.querySelectorAll('.remove-clan-btn:not([disabled])').forEach(btn => {
             btn.addEventListener('click', async () => {
