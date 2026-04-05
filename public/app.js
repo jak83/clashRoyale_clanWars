@@ -1014,9 +1014,9 @@ function renderViikkoskabatStats(history, allPlayers) {
 
     const thead = `<thead><tr>
         <th style="text-align:left; padding: 0.5rem 0.75rem;">Player</th>
-        ${days.map(d => `<th style="padding: 0.5rem 0.75rem;">Day ${d}</th>`).join('')}
+        ${days.map(d => `<th style="padding: 0.5rem 0.75rem;">D${d}</th>`).join('')}
         <th style="padding: 0.5rem 0.75rem;">Decks</th>
-        <th style="padding: 0.5rem 0.75rem;">Points</th>
+        <th style="padding: 0.5rem 0.75rem;">Pts</th>
     </tr></thead>`;
 
     const playerData = [...selected].map(tag => {

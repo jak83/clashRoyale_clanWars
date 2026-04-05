@@ -465,6 +465,21 @@ h2 {
     section {
         margin-bottom: 1rem;
     }
+
+    /* Viikkoskabat table - override inline padding to fit all columns */
+    #viikkoskabat-container .history-table th,
+    #viikkoskabat-container .history-table td {
+        padding: 0.25rem 0.2rem !important;
+        font-size: 0.65rem !important;
+    }
+
+    #viikkoskabat-container .history-table th:first-child,
+    #viikkoskabat-container .history-table td:first-child {
+        width: 70px !important;
+        min-width: 70px !important;
+        max-width: 70px !important;
+        word-break: break-word;
+    }
 }
 
 /* Last War Summary Styles */
