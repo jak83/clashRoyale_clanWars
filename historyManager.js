@@ -153,6 +153,13 @@ function updateHistory(raceData, baseHistory = null, save = true, clanId = 'defa
         };
     });
 
+    // If this is the first snapshot and it's not Day 1, mark history as partial.
+    // This happens when a clan is added mid-war and earlier days were never tracked.
+    if (Object.keys(history.days).length === 0 && warDay > 1) {
+        history.partial = true;
+        console.log(`[historyManager] Marking history as partial for clan '${clanId}': first snapshot is warDay=${warDay}`);
+    }
+
     // Guard against API returning all-zero data at period transition (section end/start).
     // If the existing snapshot for this day has more total decksUsed, keep it.
     const newTotalDecks = participants.reduce((sum, p) => sum + (p.decksUsed || 0), 0);

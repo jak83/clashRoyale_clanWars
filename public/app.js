@@ -1332,6 +1332,58 @@ function renderWarStats(currentRace, raceLog) {
     }
 }
 
+function getNextWarThursday() {
+    const now = new Date();
+    const day = now.getDay(); // 0=Sun, 4=Thu
+    const daysUntil = ((4 - day + 7) % 7) || 7;
+    const next = new Date(now);
+    next.setDate(now.getDate() + daysUntil);
+    return next.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' });
+}
+
+function renderPartialHistory(history, container) {
+    // Use the last available day's decksUsed as the total war participation
+    const days = Object.keys(history.days).sort((a, b) => Number(a) - Number(b));
+    const lastDay = history.days[days[days.length - 1]];
+    const players = lastDay.players || {};
+
+    const sorted = Object.values(players).sort((a, b) => (b.decksUsed || 0) - (a.decksUsed || 0));
+    const totalDecks = sorted.reduce((sum, p) => sum + (p.decksUsed || 0), 0);
+    const maxPossible = sorted.length * 16;
+    const nextWar = getNextWarThursday();
+
+    const rows = sorted.map(p => {
+        const decks = p.decksUsed || 0;
+        const cls = decks >= 16 ? 'status-complete' : decks > 0 ? 'status-incomplete' : 'status-incomplete';
+        return `<tr>
+            <td class="player-name-cell">${p.name}</td>
+            <td class="history-val ${cls}">${decks} / 16</td>
+            <td class="history-val" style="color: var(--text-secondary)">${p.fame ? p.fame.toLocaleString() : '–'}</td>
+        </tr>`;
+    }).join('');
+
+    container.innerHTML = `
+        <div style="background: var(--bg-secondary); border: 1px solid var(--accent-orange); border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 1.25rem; color: var(--text-secondary); font-size: 0.9rem; line-height: 1.5;">
+            <div style="font-weight: 600; color: var(--accent-orange); margin-bottom: 0.35rem;">Daily statistics not available for this war</div>
+            This clan was added mid-war so day-by-day tracking was not captured.
+            Showing total decks used across the entire war week.<br>
+            <span style="color: var(--text-primary);">Full daily tracking starts from the next war — ${nextWar}.</span>
+        </div>
+        <div style="text-align: center; color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1rem;">
+            ${totalDecks} / ${maxPossible} total decks played (${Math.round(totalDecks / maxPossible * 100)}%)
+        </div>
+        <div class="history-table-container">
+            <table class="history-table">
+                <thead><tr>
+                    <th>Player</th>
+                    <th class="history-val">Total Decks</th>
+                    <th class="history-val">Points</th>
+                </tr></thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>`;
+}
+
 async function renderHistory(history, currentMemberTags = []) {
     const container = document.getElementById('history-container');
     container.innerHTML = '';
@@ -1350,6 +1402,11 @@ async function renderHistory(history, currentMemberTags = []) {
                     Data will appear here after the next API poll.
                 </div>
             </div>`;
+        return;
+    }
+
+    if (history.partial) {
+        renderPartialHistory(history, container);
         return;
     }
 
