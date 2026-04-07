@@ -16,8 +16,8 @@ echo "Timestamp: $TIMESTAMP"
 echo "Backup location: $BACKUP_DIR"
 echo ""
 
-# Check if directories exist
-if [ ! -d "$PROJECT_DIR/ongoing" ] && [ ! -d "$PROJECT_DIR/history" ]; then
+# Check if any history data exists (default clan or multi-clan)
+if [ ! -d "$PROJECT_DIR/ongoing" ] && [ ! -d "$PROJECT_DIR/history" ] && [ ! -d "$PROJECT_DIR/clans" ]; then
     echo "ERROR: No history data found at $PROJECT_DIR"
     exit 1
 fi
@@ -28,8 +28,9 @@ echo "Creating backup: $BACKUP_FILE"
 
 tar -czf "$BACKUP_FILE" \
     -C "$PROJECT_DIR" \
-    ongoing \
-    history \
+    $([ -d "$PROJECT_DIR/ongoing" ] && echo "ongoing") \
+    $([ -d "$PROJECT_DIR/history" ] && echo "history") \
+    $([ -d "$PROJECT_DIR/clans" ] && echo "clans") \
     2>/dev/null
 
 if [ $? -eq 0 ]; then
