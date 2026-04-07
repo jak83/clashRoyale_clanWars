@@ -4,6 +4,12 @@ echo Deploying Clash Wars Tracker
 echo ========================================
 echo.
 
+REM Pass --skip-e2e to skip Robot Framework tests
+set SKIP_E2E=0
+if "%1"=="--skip-e2e" set SKIP_E2E=1
+if "%SKIP_E2E%"=="1" echo [INFO] Skipping e2e tests (--skip-e2e flag set)
+echo.
+
 REM Check if venv exists
 if not exist "venv\Scripts\activate.bat" (
     echo ERROR: Python virtual environment not found!
@@ -58,23 +64,27 @@ if errorlevel 1 (
 )
 echo.
 
-echo [3/6] Running E2E tests with Robot Framework...
-call venv\Scripts\activate.bat && robot --outputdir tests/e2e/results tests/e2e/integration_tests.robot tests/e2e/browser_tests.robot tests/e2e/day_filter_bug.robot
-if errorlevel 1 (
-    echo.
-    echo ========================================
-    echo ERROR: E2E tests failed!
-    echo ========================================
-    echo.
-    echo See tests/e2e/results/report.html for details.
-    echo Deployment aborted. Fix failing tests before deploying.
-    echo.
-    echo Stopping local server...
-    taskkill /F /FI "WINDOWTITLE eq npm start*" > nul 2>&1
-    taskkill /F /FI "IMAGENAME eq node.exe" /FI "MEMUSAGE gt 10000" > nul 2>&1
-    echo.
-    pause
-    exit /b 1
+if "%SKIP_E2E%"=="1" (
+    echo [3/6] Skipping E2E tests.
+) else (
+    echo [3/6] Running E2E tests with Robot Framework...
+    call venv\Scripts\activate.bat && robot --outputdir tests/e2e/results tests/e2e/integration_tests.robot tests/e2e/browser_tests.robot tests/e2e/day_filter_bug.robot
+    if errorlevel 1 (
+        echo.
+        echo ========================================
+        echo ERROR: E2E tests failed!
+        echo ========================================
+        echo.
+        echo See tests/e2e/results/report.html for details.
+        echo Deployment aborted. Fix failing tests before deploying.
+        echo.
+        echo Stopping local server...
+        taskkill /F /FI "WINDOWTITLE eq npm start*" > nul 2>&1
+        taskkill /F /FI "IMAGENAME eq node.exe" /FI "MEMUSAGE gt 10000" > nul 2>&1
+        echo.
+        pause
+        exit /b 1
+    )
 )
 echo.
 
