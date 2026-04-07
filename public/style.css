@@ -339,14 +339,30 @@ h2 {
 }
 
 @media (max-width: 600px) {
-    /* Reduce overall font sizes */
+    /* Shrink body padding — reclaim vertical space */
     body {
         font-size: 13px;
+        padding: 0.75rem;
+    }
+
+    /* Compact header — less empty space before the table */
+    header {
+        margin-bottom: 0.75rem;
     }
 
     h1 {
         font-size: 1.3rem;
-        margin-bottom: 0.5rem;
+        margin-bottom: 0.2rem;
+    }
+
+    .active-clan-subtitle {
+        font-size: 0.95rem;
+        margin-top: 0.15rem;
+    }
+
+    .header-subtitle {
+        font-size: 0.8rem;
+        margin-top: 0.1rem;
     }
 
     h2 {
@@ -355,7 +371,93 @@ h2 {
     }
 
     .container {
-        padding: 0.5rem;
+        padding: 0;
+    }
+
+    /* Clan switcher — compact */
+    .clan-switcher {
+        padding: 0.4rem 0.75rem;
+        margin-bottom: 0.75rem;
+        font-size: 0.85rem;
+    }
+
+    /* Tabs — horizontal scroll so they never wrap */
+    .tabs {
+        gap: 0;
+        margin-bottom: 0.75rem;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+
+    .tabs::-webkit-scrollbar {
+        display: none;
+    }
+
+    .tab-btn {
+        font-size: 0.82rem;
+        padding: 0.65rem 0.85rem;
+        white-space: nowrap;
+        min-height: 44px; /* iOS tap target */
+    }
+
+    /* Buttons — minimum 44px tap target */
+    .action-btn {
+        font-size: 0.82rem;
+        padding: 0.55rem 0.7rem;
+        min-height: 44px;
+    }
+
+    /* History controls — 2-column grid, Refresh full-width on top */
+    .history-controls {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.4rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .history-controls .action-btn:first-child {
+        grid-column: 1 / -1;
+    }
+
+    /* Countdown — compact strip instead of large box */
+    .countdown-display {
+        margin: 0.5rem 0;
+        padding: 0.5rem 0.75rem;
+        font-size: 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+
+    .countdown-label {
+        font-size: 0.8rem;
+        margin-bottom: 0;
+    }
+
+    .countdown-value {
+        font-size: 1.1rem;
+    }
+
+    .countdown-subtext {
+        display: none; /* "Resets daily at 10:00 UTC" — obvious on mobile */
+    }
+
+    /* Day filter buttons — tappable */
+    .day-filter-btn {
+        min-height: 44px;
+        padding: 0.55rem 1rem;
+        font-size: 0.85rem;
+    }
+
+    .day-filters {
+        margin-bottom: 0.75rem;
+        gap: 0.4rem;
+    }
+
+    .player-count-display {
+        margin: 0.4rem 0;
     }
 
     /* Summary cards */
@@ -399,49 +501,42 @@ h2 {
         margin-top: 0.1rem;
     }
 
-    .deck-progress {
-        font-size: 1.1rem;
-    }
-
-    .deck-label {
-        font-size: 0.65rem;
-    }
-
-    /* History table - force columns to show */
+    /* History table */
     .history-table-container {
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
         margin: 0.5rem 0;
+        padding: 0.5rem;
     }
 
     .history-table {
-        font-size: 0.6rem;
+        font-size: 0.7rem;
         table-layout: fixed;
         width: 100% !important;
-        min-width: unset !important; /* Override desktop 600px */
+        min-width: unset !important;
     }
 
-    /* First column (player name) - super narrow */
+    /* First column (player name) */
     .history-table th:first-child,
     .history-table td:first-child {
-        width: 55px !important;
-        min-width: 55px;
-        max-width: 55px;
-        padding: 0.25rem 0.15rem;
+        width: 70px !important;
+        min-width: 70px;
+        max-width: 70px;
+        padding: 0.35rem 0.2rem;
     }
 
-    /* Day columns - smaller to fit */
+    /* Day and points columns */
     .history-table th:not(:first-child),
     .history-table td:not(:first-child) {
-        width: 38px !important;
-        min-width: 38px;
-        padding: 0.25rem 0.15rem;
+        width: 42px !important;
+        min-width: 42px;
+        padding: 0.35rem 0.15rem;
         text-align: center;
-        font-size: 0.55rem;
+        font-size: 0.65rem;
     }
 
     .history-table .player-name {
-        font-size: 0.65rem;
+        font-size: 0.7rem;
         white-space: normal;
         word-break: break-word;
         line-height: 1.2;
@@ -449,7 +544,7 @@ h2 {
     }
 
     .history-table .player-tag {
-        display: none !important; /* Hide tag on mobile */
+        display: none !important;
     }
 
     .timestamp-small {
@@ -458,24 +553,26 @@ h2 {
         margin-top: 0.1rem;
     }
 
-    /* Buttons */
-    .action-btn, .tab-btn {
-        font-size: 0.8rem;
-        padding: 0.4rem 0.6rem;
+    /* Podium — compact on mobile */
+    .podium {
+        gap: 0.75rem;
+        margin: 1rem 0;
     }
 
-    /* Tabs */
-    .tabs {
-        gap: 0.25rem;
-        margin-bottom: 0.75rem;
+    .podium-card {
+        min-width: 130px;
+        padding: 1rem;
     }
+
+    .podium-card__medal  { font-size: 2rem; }
+    .podium-card__points { font-size: 1.2rem; }
 
     /* Sections */
     section {
         margin-bottom: 1rem;
     }
 
-    /* Viikkoskabat table - override inline padding to fit all columns */
+    /* Viikkoskabat table */
     #viikkoskabat-container .history-table th,
     #viikkoskabat-container .history-table td {
         padding: 0.25rem 0.2rem !important;
