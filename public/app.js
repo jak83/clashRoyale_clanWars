@@ -1100,6 +1100,14 @@ async function fetchHistory(force = false) {
     const container = document.getElementById('history-container');
     container.innerHTML = '<div class="loading-text">Loading history...</div>';
 
+    // Always clear stale day-filter buttons so they cannot re-insert a previous
+    // clan's table if the new clan has no history (or partial history).
+    const filterContainer = document.getElementById('day-filter-buttons');
+    if (filterContainer) {
+        filterContainer.innerHTML = '';
+        filterContainer.style.display = 'none';
+    }
+
     try {
         // Fetch both history and current clan members
         const [historyResponse, membersResponse] = await Promise.all([
