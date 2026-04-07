@@ -45,9 +45,19 @@ async function fetchClans() {
         switcher.style.display = '';
         select.style.display = clans.length > 1 ? '' : 'none';
 
+        const setActiveClanSubtitle = (clanId) => {
+            const el = document.getElementById('active-clan-subtitle');
+            if (!el) return;
+            const clan = clans.find(c => c.id === clanId);
+            el.textContent = clan ? (clan.name || clan.tag) : '';
+        };
+
+        setActiveClanSubtitle(activeClanId);
+
         if (clans.length > 1) {
             select.addEventListener('change', (e) => {
                 activeClanId = e.target.value;
+                setActiveClanSubtitle(activeClanId);
                 refreshActiveTab();
             });
         }
