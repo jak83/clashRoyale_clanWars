@@ -153,6 +153,20 @@ function updateHistory(raceData, baseHistory = null, save = true, clanId = 'defa
         };
     });
 
+    // Guard against API returning all-zero data at period transition (section end/start).
+    // If the existing snapshot for this day has more total decksUsed, keep it.
+    const newTotalDecks = participants.reduce((sum, p) => sum + (p.decksUsed || 0), 0);
+    const existingDay = history.days[warDay];
+    if (existingDay) {
+        const existingTotalDecks = Object.values(existingDay.players || {})
+            .reduce((sum, p) => sum + (p.decksUsed || 0), 0);
+        if (newTotalDecks < existingTotalDecks) {
+            console.log(`[historyManager] Skipping snapshot for clan '${clanId}' warDay=${warDay}: new total ${newTotalDecks} < existing ${existingTotalDecks} (API transition artifact)`);
+            if (save) saveHistory(history, clanId);
+            return history;
+        }
+    }
+
     console.log(`[historyManager] Snapshot for clan '${clanId}': periodType=${raceData.periodType}, warDay=${warDay}, players=${participants.length}`);
 
     // 4. Update History
