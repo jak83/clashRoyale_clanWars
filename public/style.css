@@ -521,32 +521,35 @@ h2 {
 /* Tabs */
 .tabs {
     display: flex;
-    gap: 1rem;
+    gap: 0.25rem;
     margin-bottom: 2rem;
-    border-bottom: 1px solid var(--border-color);
-    padding-bottom: 1rem;
+    border-bottom: 2px solid var(--border-color);
+    padding-bottom: 0;
 }
 
 .tab-btn {
     background: none;
     border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
     color: var(--text-secondary);
-    font-size: 1rem;
+    font-size: 0.95rem;
     font-weight: 600;
     cursor: pointer;
-    padding: 0.5rem 1rem;
-    border-radius: 6px;
-    transition: all 0.2s;
+    padding: 0.6rem 1rem;
+    border-radius: 6px 6px 0 0;
+    transition: color 0.15s, border-color 0.15s;
 }
 
 .tab-btn:hover {
     color: var(--text-primary);
-    background: var(--card-bg);
+    background: rgba(255, 255, 255, 0.04);
 }
 
 .tab-btn.active {
     color: var(--text-primary);
-    background: var(--accent-blue);
+    background: none;
+    border-bottom-color: var(--accent-blue);
 }
 
 /* History View */
@@ -565,10 +568,31 @@ h2 {
     padding: 0.5rem 1rem;
     border-radius: 6px;
     cursor: pointer;
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: border-color 0.15s, background 0.15s, opacity 0.15s;
 }
 
 .action-btn:hover {
     border-color: var(--accent-blue);
+}
+
+/* Toggle button states — replace inline style.backgroundColor */
+.btn-toggle-on-blue {
+    background-color: var(--accent-blue);
+    border-color: var(--accent-blue);
+}
+
+.btn-toggle-on-orange {
+    background-color: var(--accent-orange);
+    border-color: var(--accent-orange);
+}
+
+.btn-toggle-off {
+    background-color: #475569;
+    border-color: #475569;
+    color: var(--text-secondary);
 }
 
 .history-table-container {
@@ -748,8 +772,8 @@ h2 {
 }
 
 .day-filter-btn.active {
-    background: var(--accent-red);
-    border-color: var(--accent-red);
+    background: var(--accent-blue);
+    border-color: var(--accent-blue);
     color: white;
 }
 
@@ -1234,9 +1258,11 @@ h2 {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    background: rgba(255, 255, 255, 0.05);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 0.6rem 1rem;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    margin-bottom: 1.25rem;
     font-size: 0.9rem;
     color: var(--text-secondary);
 }
@@ -1460,3 +1486,94 @@ h2 {
     opacity: 0.7;
     cursor: default;
 }
+
+/* View titles (replaces inline style="text-align:center; margin-bottom:1rem") */
+.view-title {
+    text-align: center;
+    margin-bottom: 1rem;
+}
+
+/* Generic info note (blue tint, formerly inline in Last War view) */
+.info-note {
+    background: rgba(59, 130, 246, 0.08);
+    border: 1px solid rgba(59, 130, 246, 0.25);
+    border-radius: 8px;
+    padding: 0.85rem 1rem;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+/* Partial history notice (replaces inline styles in renderPartialHistory) */
+.partial-history-notice {
+    background: rgba(249, 115, 22, 0.08);
+    border: 1px solid rgba(249, 115, 22, 0.3);
+    border-radius: 8px;
+    padding: 0.85rem 1.1rem;
+    margin-bottom: 1.1rem;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+.partial-history-notice__title {
+    font-weight: 600;
+    color: var(--accent-orange);
+    margin-bottom: 0.3rem;
+}
+
+/* Deck counter bar */
+.deck-counter {
+    text-align: center;
+    margin: 0.5rem 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.deck-counter .deck-played {
+    color: var(--accent-green);
+}
+
+/* Podium */
+.podium {
+    display: flex;
+    justify-content: center;
+    gap: 1.25rem;
+    margin: 1.75rem 0;
+    flex-wrap: wrap;
+}
+
+.podium-card {
+    background: var(--card-bg);
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    text-align: center;
+    min-width: 160px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    border: 2px solid transparent;
+}
+
+.podium-card--gold   { border-color: #F59E0B; }
+.podium-card--silver { border-color: #94A3B8; }
+.podium-card--bronze { border-color: #CD7F32; }
+
+.podium-card__medal    { font-size: 2.5rem; margin-bottom: 0.35rem; }
+.podium-card__position { font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.08em; }
+.podium-card__name     { font-weight: 700; font-size: 1.1rem; margin: 0.4rem 0; color: var(--text-primary); }
+.podium-card__points   { font-size: 1.4rem; font-weight: 700; margin: 0.35rem 0; }
+.podium-card__points--gold   { color: #F59E0B; }
+.podium-card__points--silver { color: #94A3B8; }
+.podium-card__points--bronze { color: #CD7F32; }
+.podium-card__decks    { font-size: 0.85rem; color: var(--text-secondary); }
+
+/* Empty history state */
+.empty-history-msg {
+    padding: 2.5rem 2rem;
+    text-align: center;
+}
+
+.empty-history-msg__icon  { font-size: 1.75rem; margin-bottom: 0.75rem; }
+.empty-history-msg__title { font-weight: 600; margin-bottom: 0.5rem; font-size: 1rem; }
+.empty-history-msg__body  { color: var(--text-secondary); font-size: 0.9rem; line-height: 1.6; }

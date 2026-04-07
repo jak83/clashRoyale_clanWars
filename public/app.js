@@ -881,8 +881,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             toggleLeftPlayersBtn.textContent = !isHidden ? 'Show Inactive Left Players' : 'Hide Inactive Left Players';
 
             // Visual toggle
-            if (!isHidden) toggleLeftPlayersBtn.style.backgroundColor = '#666';
-            else toggleLeftPlayersBtn.style.backgroundColor = 'var(--accent-orange)';
+            toggleLeftPlayersBtn.classList.toggle('btn-toggle-on-orange', isHidden);
+            toggleLeftPlayersBtn.classList.toggle('btn-toggle-off', !isHidden);
 
             // Update player count
             updatePlayerCount();
@@ -905,9 +905,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             toggleHistoryBtn.dataset.hidden = !isHidden;
             toggleHistoryBtn.textContent = !isHidden ? 'Show Completed' : 'Hide Completed';
 
-            // Visual Toggle Style (optional)
-            if (!isHidden) toggleHistoryBtn.style.backgroundColor = '#666';
-            else toggleHistoryBtn.style.backgroundColor = 'var(--accent-blue)';
+            // Visual toggle
+            toggleHistoryBtn.classList.toggle('btn-toggle-on-blue', isHidden);
+            toggleHistoryBtn.classList.toggle('btn-toggle-off', !isHidden);
 
             // Update player count
             updatePlayerCount();
@@ -1407,14 +1407,14 @@ function renderPartialHistory(history, container) {
     }).join('');
 
     container.innerHTML = `
-        <div style="background: var(--bg-secondary); border: 1px solid var(--accent-orange); border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 1.25rem; color: var(--text-secondary); font-size: 0.9rem; line-height: 1.5;">
-            <div style="font-weight: 600; color: var(--accent-orange); margin-bottom: 0.35rem;">Daily statistics not available for this war</div>
+        <div class="partial-history-notice">
+            <div class="partial-history-notice__title">Daily statistics not available for this war</div>
             This clan was added mid-war so day-by-day tracking was not captured.
             Showing total decks used across the entire war week.<br>
-            <span style="color: var(--text-primary);">Full daily tracking starts from the next war — ${nextWar}.</span>
+            Full daily tracking starts from the next war — ${nextWar}.
         </div>
-        <div style="text-align: center; color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1rem;">
-            ${totalDecks} / ${maxPossible} total decks played (${Math.round(totalDecks / maxPossible * 100)}%)
+        <div class="deck-counter">
+            <span class="deck-played">${totalDecks}</span> / ${maxPossible} total decks played (${Math.round(totalDecks / maxPossible * 100)}%)
         </div>
         <div class="history-table-container">
             <table class="history-table">
@@ -1438,10 +1438,10 @@ async function renderHistory(history, currentMemberTags = []) {
 
     if (!history || !history.days || Object.keys(history.days).length === 0) {
         container.innerHTML = `
-            <div class="training-message" style="padding: 2rem; text-align: center;">
-                <div style="font-size: 1.5rem; margin-bottom: 0.75rem;">📭</div>
-                <div style="font-weight: 600; margin-bottom: 0.5rem;">No history yet for this clan</div>
-                <div style="color: var(--text-secondary); font-size: 0.9rem;">
+            <div class="empty-history-msg">
+                <div class="empty-history-msg__icon">📭</div>
+                <div class="empty-history-msg__title">No history yet for this clan</div>
+                <div class="empty-history-msg__body">
                     History is collected automatically during war days (Thu–Sun).<br>
                     Data will appear here after the next API poll.
                 </div>
@@ -1625,7 +1625,8 @@ async function renderHistory(history, currentMemberTags = []) {
     if (toggleBtn && !toggleBtn.dataset.hidden) {
         toggleBtn.dataset.hidden = 'true';
         toggleBtn.textContent = 'Show Completed';
-        toggleBtn.style.backgroundColor = '#666';
+        toggleBtn.classList.add('btn-toggle-off');
+        toggleBtn.classList.remove('btn-toggle-on-blue');
     }
 
     const toggleLeftBtn = document.getElementById('toggle-left-players');
@@ -1633,16 +1634,14 @@ async function renderHistory(history, currentMemberTags = []) {
         // Always reset to default state: inactive left players are hidden
         toggleLeftBtn.dataset.hidden = 'true';
         toggleLeftBtn.textContent = 'Show Inactive Left Players';
-        toggleLeftBtn.style.backgroundColor = '#666';
-
-        // Rows are already hidden by default in the row creation logic
+        toggleLeftBtn.classList.add('btn-toggle-off');
+        toggleLeftBtn.classList.remove('btn-toggle-on-orange');
     }
 
     // Display deck counter using pure function (consistent with filter logic)
     const deckCounter = document.createElement('div');
     deckCounter.className = 'deck-counter';
     deckCounter.id = 'deck-counter';
-    deckCounter.style.cssText = 'text-align: center; margin: 0.5rem 0; font-size: 1.1rem; font-weight: 600; color: var(--accent-blue);';
 
     // Use pure function for calculation (showing all days)
     const playerDataForCounter = playerArray.map(p => ({
@@ -1653,7 +1652,7 @@ async function renderHistory(history, currentMemberTags = []) {
     // Calculate max based on clan capacity (50 players), not actual players in history
     const maxDecks = 50 * 4 * days.length;
     const percentage = maxDecks > 0 ? ((totalDecksPlayed / maxDecks) * 100).toFixed(1) : '0.0';
-    deckCounter.innerHTML = `<span style="color: var(--accent-green);">${totalDecksPlayed}</span> / ${maxDecks} decks played (${percentage}%)`;
+    deckCounter.innerHTML = `<span class="deck-played">${totalDecksPlayed}</span> / ${maxDecks} decks played (${percentage}%)`;
 
     // Store max decks per day on table for filtering
     table.dataset.maxDecksPerDay = 50 * 4; // Clan capacity, not actual player count
@@ -1697,7 +1696,7 @@ function updatePodium(history, days) {
 function createPodium(history, days) {
     const podiumContainer = document.createElement('div');
     podiumContainer.id = 'history-podium';
-    podiumContainer.style.cssText = 'display: flex; justify-content: center; gap: 1.5rem; margin: 2rem 0; flex-wrap: wrap;';
+    podiumContainer.className = 'podium';
 
     // Calculate top 3 players by total points
     const playerStats = {};
@@ -1754,33 +1753,25 @@ function createPodium(history, days) {
         .slice(0, 3);
 
     if (top3.length === 0) {
-        podiumContainer.innerHTML = '<div style="text-align: center; color: var(--text-secondary);">No data yet</div>';
+        podiumContainer.innerHTML = '<div class="empty-history-msg__body" style="text-align:center;">No data yet</div>';
         return podiumContainer;
     }
 
     // Create podium cards
     const medals = ['🥇', '🥈', '🥉'];
     const positions = ['1st', '2nd', '3rd'];
-    const colors = ['var(--accent-green)', '#C0C0C0', '#CD7F32'];
+    const colorModifiers = ['gold', 'silver', 'bronze'];
 
     top3.forEach((player, index) => {
         const card = document.createElement('div');
-        card.style.cssText = `
-            background: var(--card-bg);
-            border: 3px solid ${colors[index]};
-            border-radius: 12px;
-            padding: 1.5rem;
-            text-align: center;
-            min-width: 180px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        `;
+        card.className = `podium-card podium-card--${colorModifiers[index]}`;
 
         card.innerHTML = `
-            <div style="font-size: 3rem; margin-bottom: 0.5rem;">${medals[index]}</div>
-            <div style="font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.1em;">${positions[index]} Place</div>
-            <div style="font-weight: 700; font-size: 1.2rem; margin: 0.5rem 0; color: var(--text-primary);">${player.name}</div>
-            <div style="color: ${colors[index]}; font-size: 1.5rem; font-weight: 700; margin: 0.5rem 0;">${player.totalPoints.toLocaleString()} pts</div>
-            <div style="color: var(--text-secondary); font-size: 0.9rem;">${player.totalDecks} / ${days.length * 4} decks</div>
+            <div class="podium-card__medal">${medals[index]}</div>
+            <div class="podium-card__position">${positions[index]} Place</div>
+            <div class="podium-card__name">${player.name}</div>
+            <div class="podium-card__points podium-card__points--${colorModifiers[index]}">${player.totalPoints.toLocaleString()} pts</div>
+            <div class="podium-card__decks">${player.totalDecks} / ${days.length * 4} decks</div>
         `;
 
         podiumContainer.appendChild(card);
@@ -1987,14 +1978,16 @@ function filterByDay(selectedDay, table, activeBtn, silent = false) {
         if (toggleCompletedBtn) {
             toggleCompletedBtn.dataset.hidden = 'false';
             toggleCompletedBtn.textContent = 'Hide Completed';
-            toggleCompletedBtn.style.backgroundColor = '';
+            toggleCompletedBtn.classList.remove('btn-toggle-off');
+            toggleCompletedBtn.classList.add('btn-toggle-on-blue');
         }
 
         const toggleLeftBtn = document.getElementById('toggle-left-players');
         if (toggleLeftBtn) {
             toggleLeftBtn.dataset.hidden = 'false';
             toggleLeftBtn.textContent = 'Hide Inactive Left Players';
-            toggleLeftBtn.style.backgroundColor = '';
+            toggleLeftBtn.classList.remove('btn-toggle-off');
+            toggleLeftBtn.classList.add('btn-toggle-on-orange');
         }
     }
 

@@ -60,17 +60,15 @@
                 <button class="tab-btn active" data-tab="history" data-testid="tab-daily-history">Daily History</button>
                 <button class="tab-btn" data-tab="war-stats" data-testid="tab-war-stats">War Stats</button>
                 <button class="tab-btn" data-tab="last-war" data-testid="tab-last-war">Last War</button>
-                <button class="tab-btn" data-tab="viikkoskabat" data-testid="tab-viikkoskabat">!!Viikkoskabat!!!</button>
+                <button class="tab-btn" data-tab="viikkoskabat" data-testid="tab-viikkoskabat">Viikkoskabat</button>
             </div>
 
             <!-- HISTORY VIEW -->
             <div id="view-history" class="tab-content active" data-testid="view-daily-history">
                 <div class="history-controls" data-testid="history-controls">
                     <button id="refresh-history" class="action-btn" data-testid="btn-refresh-history">Refresh History</button>
-                    <button id="toggle-history-completed" class="action-btn" data-testid="btn-toggle-completed"
-                        style="background-color: var(--accent-blue);">Hide Completed</button>
-                    <button id="toggle-left-players" class="action-btn" data-testid="btn-toggle-left-players"
-                        style="background-color: var(--accent-orange);">Hide Left Players</button>
+                    <button id="toggle-history-completed" class="action-btn btn-toggle-on-blue" data-testid="btn-toggle-completed">Hide Completed</button>
+                    <button id="toggle-left-players" class="action-btn btn-toggle-on-orange" data-testid="btn-toggle-left-players">Hide Left Players</button>
                 </div>
                 <!-- Deck Reset Countdown -->
                 <div id="history-countdown" data-testid="history-countdown" class="countdown-display">
@@ -103,7 +101,7 @@
 
             <!-- WAR STATS VIEW -->
             <div id="view-war-stats" class="tab-content hidden" data-testid="view-war-stats">
-                <h2 data-testid="war-stats-title" style="text-align: center; margin-bottom: 1rem;">War Statistics</h2>
+                <h2 class="view-title" data-testid="war-stats-title">War Statistics</h2>
                 <div class="history-controls">
                     <button id="refresh-war-stats" class="action-btn">Refresh War Stats</button>
                 </div>
@@ -114,9 +112,8 @@
 
             <!-- LAST WAR VIEW -->
             <div id="view-last-war" class="tab-content hidden" data-testid="view-last-war">
-                <h2 data-testid="last-war-title" style="text-align: center; margin-bottom: 1rem;">Last War Stats</h2>
-                <div data-testid="last-war-note"
-                    style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 8px; padding: 1rem; margin-bottom: 1rem; font-size: 0.9rem; color: var(--text-secondary);">
+                <h2 class="view-title" data-testid="last-war-title">Last War Stats</h2>
+                <div class="info-note" data-testid="last-war-note">
                     <strong>Note:</strong> Currently showing data from Clash Royale API. Once the current war ends,
                     detailed daily history will be archived locally and available here.
                 </div>
@@ -130,7 +127,7 @@
 
             <!-- VIIKKOSKABAT VIEW -->
             <div id="view-viikkoskabat" class="tab-content hidden" data-testid="view-viikkoskabat">
-                <h2 style="text-align: center; margin-bottom: 1rem;">!!Viikkoskabat!!!</h2>
+                <h2 class="view-title">Viikkoskabat</h2>
                 <div class="viikkoskabat-player-selector">
                     <div class="viikkoskabat-selector-header">
                         <span class="viikkoskabat-selector-title">Select players</span>
