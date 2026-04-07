@@ -666,6 +666,42 @@ h2 {
     color: var(--accent-blue);
 }
 
+.val-unknown {
+    color: var(--text-secondary);
+}
+
+/* Viikkoskabat table column helpers */
+.vk-col-player {
+    text-align: left;
+    padding: 0.5rem 0.75rem;
+    font-weight: 500;
+}
+
+.vk-col-stat {
+    text-align: center;
+    padding: 0.5rem 0.75rem;
+    font-weight: 600;
+}
+
+/* Countdown widget sub-elements (used in history-countdown) */
+.countdown-label {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.25rem;
+}
+
+.countdown-value {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--accent-blue);
+}
+
+.countdown-subtext {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-top: 0.25rem;
+}
+
 /* Countdown Display */
 .countdown-display {
     text-align: center;

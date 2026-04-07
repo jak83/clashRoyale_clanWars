@@ -10,6 +10,30 @@ const clanConfig = require('./clanConfig');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// --- Clash Royale API Helpers ---
+
+/** URL-encode a clan/player tag for API requests: '#2ABC' → '%232ABC' */
+function formatTagForUrl(tag) {
+    const normalized = tag.startsWith('#') ? tag : '#' + tag;
+    return '%23' + normalized.toUpperCase().slice(1);
+}
+
+/** Authenticated GET request to the Clash Royale API */
+function clashApiGet(url, apiToken) {
+    return axios.get(url, {
+        headers: { 'Authorization': `Bearer ${apiToken}`, 'Accept': 'application/json' }
+    });
+}
+
+/** Send a standardised error response, forwarding the upstream status when available */
+function sendApiError(res, error, fallbackMessage) {
+    if (error.response) {
+        res.status(error.response.status).json(error.response.data);
+    } else {
+        res.status(500).json({ error: fallbackMessage });
+    }
+}
+
 // Middleware
 app.use(cors());
 app.use(express.json()); // Required for parsing JSON bodies (req.body)
@@ -66,16 +90,10 @@ async function updateRaceData(clan) {
         return null;
     }
 
-    const formattedTag = clan.tag.startsWith('#') ? '%23' + clan.tag.slice(1) : clan.tag;
-    const url = `https://api.clashroyale.com/v1/clans/${formattedTag}/currentriverrace`;
+    const url = `https://api.clashroyale.com/v1/clans/${formatTagForUrl(clan.tag)}/currentriverrace`;
 
     try {
-        const response = await axios.get(url, {
-            headers: {
-                'Authorization': `Bearer ${clan.apiToken}`,
-                'Accept': 'application/json'
-            }
-        });
+        const response = await clashApiGet(url, clan.apiToken);
 
         const state = clanCache.get(clan.id);
 
@@ -159,14 +177,9 @@ app.post('/api/clans', async (req, res) => {
         return res.status(400).json({ error: `Maximum of ${MAX_CLANS} clans allowed` });
     }
 
-    const normalizedTag = tag.startsWith('#') ? tag.toUpperCase() : '#' + tag.toUpperCase();
-    const formattedTag = '%23' + normalizedTag.slice(1);
-
     try {
         // Fetch clan info to verify it exists and get its official name
-        const response = await axios.get(`https://api.clashroyale.com/v1/clans/${formattedTag}`, {
-            headers: { 'Authorization': `Bearer ${apiToken}`, 'Accept': 'application/json' }
-        });
+        const response = await clashApiGet(`https://api.clashroyale.com/v1/clans/${formatTagForUrl(tag)}`, apiToken);
 
         const clanInfo = response.data;
         const id = clanConfig.tagToId(clanInfo.tag);
@@ -233,24 +246,15 @@ app.get('/api/race/log', async (req, res) => {
     const clan = resolveClan(req);
     if (!clan) return res.status(400).json({ error: 'Unknown clan' });
 
-    const formattedTag = clan.tag.startsWith('#') ? '%23' + clan.tag.slice(1) : clan.tag;
-    const url = `https://api.clashroyale.com/v1/clans/${formattedTag}/riverracelog`;
-
     try {
-        const response = await axios.get(url, {
-            headers: {
-                'Authorization': `Bearer ${clan.apiToken}`,
-                'Accept': 'application/json'
-            }
-        });
+        const response = await clashApiGet(
+            `https://api.clashroyale.com/v1/clans/${formatTagForUrl(clan.tag)}/riverracelog`,
+            clan.apiToken
+        );
         res.json(response.data);
     } catch (error) {
         console.error('Error fetching race log:', error.message);
-        if (error.response) {
-            res.status(error.response.status).json(error.response.data);
-        } else {
-            res.status(500).json({ error: 'Failed to fetch race log' });
-        }
+        sendApiError(res, error, 'Failed to fetch race log');
     }
 });
 
@@ -272,29 +276,16 @@ app.get('/api/clan/members', async (req, res) => {
     const clan = resolveClan(req);
     if (!clan) return res.status(400).json({ error: 'Unknown clan' });
 
-    const formattedTag = clan.tag.startsWith('#') ? '%23' + clan.tag.slice(1) : clan.tag;
-    const url = `https://api.clashroyale.com/v1/clans/${formattedTag}`;
-
     try {
-        const response = await axios.get(url, {
-            headers: {
-                'Authorization': `Bearer ${clan.apiToken}`,
-                'Accept': 'application/json'
-            }
-        });
-
+        const response = await clashApiGet(
+            `https://api.clashroyale.com/v1/clans/${formatTagForUrl(clan.tag)}`,
+            clan.apiToken
+        );
         const memberTags = new Set(response.data.memberList.map(m => m.tag));
-        res.json({
-            memberList: response.data.memberList,
-            memberTags: Array.from(memberTags)
-        });
+        res.json({ memberList: response.data.memberList, memberTags: Array.from(memberTags) });
     } catch (error) {
         console.error('Error fetching clan members:', error.message);
-        if (error.response) {
-            res.status(error.response.status).json(error.response.data);
-        } else {
-            res.status(500).json({ error: 'Failed to fetch clan members' });
-        }
+        sendApiError(res, error, 'Failed to fetch clan members');
     }
 });
 
@@ -317,16 +308,9 @@ app.post('/api/players/activity', async (req, res) => {
 
     try {
         const activityPromises = playerTags.map(async (tag) => {
-            const formattedTag = tag.startsWith('#') ? '%23' + tag.slice(1) : tag;
-            const url = `https://api.clashroyale.com/v1/players/${formattedTag}/battlelog`;
-
+            const url = `https://api.clashroyale.com/v1/players/${formatTagForUrl(tag)}/battlelog`;
             try {
-                const response = await axios.get(url, {
-                    headers: {
-                        'Authorization': `Bearer ${apiToken}`,
-                        'Accept': 'application/json'
-                    }
-                });
+                const response = await clashApiGet(url, apiToken);
 
                 const battles = response.data;
                 const status = determinePlayerStatus(battles);

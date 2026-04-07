@@ -188,6 +188,49 @@ function refreshActiveTab() {
 }
 
 /**
+ * Return the CSS class for a deck count value.
+ * @param {number|string} decks - Decks used, or '-' when unknown
+ * @param {number} maxPerDay - Max possible (default 4)
+ */
+function getDeckStatusClass(decks, maxPerDay = 4) {
+    if (decks === '-' || decks == null) return 'val-unknown';
+    if (decks >= maxPerDay) return 'val-perfect';
+    if (decks > 0) return 'val-partial';
+    return 'val-miss';
+}
+
+/**
+ * Start a 1-second repeating countdown that renders into a DOM element.
+ * Automatically stops when the element is removed from the DOM.
+ * @param {string} elementId
+ * @param {function(): string} renderFn - Returns innerHTML for each tick
+ * @returns {number} interval ID (use clearInterval to stop manually)
+ */
+function startCountdown(elementId, renderFn) {
+    // Clear any previous countdown for the same element
+    if (startCountdown._intervals) {
+        clearInterval(startCountdown._intervals[elementId]);
+    } else {
+        startCountdown._intervals = {};
+    }
+
+    function tick() {
+        const el = document.getElementById(elementId);
+        if (!el) {
+            clearInterval(startCountdown._intervals[elementId]);
+            delete startCountdown._intervals[elementId];
+            return;
+        }
+        el.innerHTML = renderFn();
+    }
+
+    tick();
+    const id = setInterval(tick, 1000);
+    startCountdown._intervals[elementId] = id;
+    return id;
+}
+
+/**
  * Reusable Polling Timer Utility
  * Tracks when the server will poll the API next and provides countdown
  */
@@ -782,9 +825,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             targetContent.classList.add('active');
 
             // Clear countdowns when switching tabs
-            if (btn.dataset.tab !== 'history' && historyCountdownInterval) {
-                clearInterval(historyCountdownInterval);
-                historyCountdownInterval = null;
+            if (btn.dataset.tab !== 'history') {
+                clearInterval(startCountdown._intervals?.['history-countdown']);
             }
             if (btn.dataset.tab !== 'war-stats' && countdownInterval) {
                 clearInterval(countdownInterval);
@@ -1013,10 +1055,10 @@ function renderViikkoskabatStats(history, allPlayers) {
     const lastDay = days[days.length - 1];
 
     const thead = `<thead><tr>
-        <th style="text-align:left; padding: 0.5rem 0.75rem;">Player</th>
-        ${days.map(d => `<th style="padding: 0.5rem 0.75rem;">D${d}</th>`).join('')}
-        <th style="padding: 0.5rem 0.75rem;">Decks</th>
-        <th style="padding: 0.5rem 0.75rem;">Pts</th>
+        <th class="vk-col-player">Player</th>
+        ${days.map(d => `<th class="vk-col-stat">D${d}</th>`).join('')}
+        <th class="vk-col-stat">Decks</th>
+        <th class="vk-col-stat">Pts</th>
     </tr></thead>`;
 
     const playerData = [...selected].map(tag => {
@@ -1026,27 +1068,22 @@ function renderViikkoskabatStats(history, allPlayers) {
             const player = (history.days[d]?.players || {})[tag];
             const decks = player ? (player.decksUsedToday ?? player.decksUsed ?? 0) : '-';
             if (typeof decks === 'number') total += decks;
-            const pct = typeof decks === 'number' ? decks / 4 : 0;
-            const color = pct >= 1 ? 'var(--accent-green)' : pct >= 0.5 ? 'var(--accent-orange)' : decks === '-' ? 'var(--text-secondary)' : 'var(--accent-red)';
-            return `<td style="text-align:center; padding: 0.5rem 0.75rem; color:${color}; font-weight:600;">${decks}</td>`;
+            return `<td class="vk-col-stat ${getDeckStatusClass(decks)}">${decks}</td>`;
         }).join('');
         const fame = (history.days[lastDay]?.players || {})[tag]?.fame ?? 0;
         return { tag, name, total, fame, dayCells };
     });
 
-    // Sort by fame descending
     playerData.sort((a, b) => b.fame - a.fame);
 
     const maxTotal = days.length * 4;
     const rows = playerData.map(({ name, total, fame, dayCells }, i) => {
         const rank = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
-        const totalColor = total >= maxTotal ? 'var(--accent-green)' : total >= maxTotal / 2 ? 'var(--accent-orange)' : 'var(--accent-red)';
-        const fameColor = fame > 0 ? 'var(--accent-blue)' : 'var(--text-secondary)';
         return `<tr>
-            <td style="padding: 0.5rem 0.75rem; font-weight:500;">${rank} ${name}</td>
+            <td class="vk-col-player">${rank} ${name}</td>
             ${dayCells}
-            <td style="text-align:center; padding: 0.5rem 0.75rem; color:${totalColor}; font-weight:700;">${total}/${maxTotal}</td>
-            <td style="text-align:center; padding: 0.5rem 0.75rem; color:${fameColor}; font-weight:700;">${fame.toLocaleString()}</td>
+            <td class="vk-col-stat ${getDeckStatusClass(total, maxTotal)}">${total}/${maxTotal}</td>
+            <td class="vk-col-stat ${fame > 0 ? 'val-perfect' : 'val-unknown'}">${fame.toLocaleString()}</td>
         </tr>`;
     }).join('');
 
@@ -1354,11 +1391,10 @@ function renderPartialHistory(history, container) {
 
     const rows = sorted.map(p => {
         const decks = p.decksUsed || 0;
-        const cls = decks >= 16 ? 'status-complete' : decks > 0 ? 'status-incomplete' : 'status-incomplete';
         return `<tr>
             <td class="player-name-cell">${p.name}</td>
-            <td class="history-val ${cls}">${decks} / 16</td>
-            <td class="history-val" style="color: var(--text-secondary)">${p.fame ? p.fame.toLocaleString() : '–'}</td>
+            <td class="history-val ${getDeckStatusClass(decks, 16)}">${decks} / 16</td>
+            <td class="history-val val-unknown">${p.fame ? p.fame.toLocaleString() : '–'}</td>
         </tr>`;
     }).join('');
 
@@ -1631,50 +1667,15 @@ async function renderHistory(history, currentMemberTags = []) {
     startHistoryCountdown();
 }
 
-/**
- * Start and update countdown timer in history view
- */
-let historyCountdownInterval = null;
-
 function startHistoryCountdown() {
-    const countdownEl = document.getElementById('history-countdown');
-    if (!countdownEl) return;
-
-    // Clear any existing interval
-    if (historyCountdownInterval) {
-        clearInterval(historyCountdownInterval);
-    }
-
-    // Update immediately
-    updateHistoryCountdown();
-
-    // Update every second
-    historyCountdownInterval = setInterval(updateHistoryCountdown, 1000);
-}
-
-function updateHistoryCountdown() {
-    const countdownEl = document.getElementById('history-countdown');
-    if (!countdownEl) {
-        // Element not found, clear interval
-        if (historyCountdownInterval) {
-            clearInterval(historyCountdownInterval);
-            historyCountdownInterval = null;
-        }
-        return;
-    }
-
-    const timeRemaining = calculateTimeUntilReset();
-    countdownEl.innerHTML = `
-        <div style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.25rem;">
-            ⏰ Time Until Deck Reset
-        </div>
-        <div style="font-size: 1.4rem; font-weight: 700; color: var(--accent-blue);">
-            ${timeRemaining.formatted}
-        </div>
-        <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.25rem;">
-            Resets daily at 10:00 UTC
-        </div>
-    `;
+    startCountdown('history-countdown', () => {
+        const { formatted } = calculateTimeUntilReset();
+        return `
+            <div class="countdown-label">⏰ Time Until Deck Reset</div>
+            <div class="countdown-value">${formatted}</div>
+            <div class="countdown-subtext">Resets daily at 10:00 UTC</div>
+        `;
+    });
 }
 
 function updatePodium(history, days) {
