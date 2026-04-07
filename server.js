@@ -130,6 +130,60 @@ async function updateRaceData(clan) {
     }
 }
 
+/**
+ * When a clan is first added, fetch its most recently completed war from the
+ * race log and save it as partial history. This ensures newly-added clans
+ * immediately show last-war data instead of "No history yet".
+ */
+async function backfillLastWar(clan) {
+    console.log(`[backfill] Fetching last war data for clan '${clan.id}' (${clan.tag})`);
+
+    const response = await clashApiGet(
+        `https://api.clashroyale.com/v1/clans/${formatTagForUrl(clan.tag)}/riverracelog?limit=1`,
+        clan.apiToken
+    );
+
+    const items = response.data?.items;
+    if (!items || items.length === 0) {
+        console.log(`[backfill] No race log available for clan '${clan.id}'`);
+        return;
+    }
+
+    const race = items[0];
+    const ourClan = race.standings?.find(s =>
+        s.clan?.tag?.toUpperCase() === clan.tag.toUpperCase()
+    )?.clan;
+
+    if (!ourClan) {
+        console.log(`[backfill] Clan '${clan.id}' not found in race log standings`);
+        return;
+    }
+
+    const participants = ourClan.participants || [];
+    const players = {};
+    participants.forEach(p => {
+        const total = p.decksUsed || 0;
+        players[p.tag] = {
+            name: p.name,
+            decksUsed: total,
+            decksUsedToday: Math.min(4, total),
+            fame: p.fame || 0
+        };
+    });
+
+    const history = {
+        seasonId: race.seasonId,
+        sectionIndex: race.sectionIndex,
+        partial: true,
+        days: {
+            '4': { timestamp: new Date().toISOString(), players }
+        }
+    };
+
+    historyManager.saveHistory(history, clan.id);
+    console.log(`[backfill] Saved last-war data for clan '${clan.id}': ${participants.length} players`);
+}
+
 // Helper: resolve clan from request, defaulting to first configured clan
 function resolveClan(req) {
     const id = req.query.clanId || clanConfig.getDefaultClan()?.id;
@@ -187,6 +241,9 @@ app.post('/api/clans', async (req, res) => {
         const newClan = clanConfig.addClan({ id, tag: clanInfo.tag, name: clanInfo.name });
         initClanState(newClan);
         updateRaceData(newClan); // Kick off first poll immediately
+        backfillLastWar(newClan).catch(err =>
+            console.error(`[backfill] Failed for clan '${newClan.id}':`, err.message)
+        );
 
         res.status(201).json({ id: newClan.id, name: clanInfo.name, tag: newClan.tag });
     } catch (error) {
