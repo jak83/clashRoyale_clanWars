@@ -500,6 +500,52 @@ app.post('/api/demo/load', (req, res) => {
     }
 });
 
+// --- Withings Token Bridge ---
+// Shared token store for the Withings MCP server across multiple PCs.
+// Requires WITHINGS_BRIDGE_SECRET in .env. Both GET and PUT require
+// Authorization: Bearer <secret>.
+
+const WITHINGS_TOKEN_FILE = path.join(__dirname, '.withings_tokens.json');
+
+function withingsBridgeAuth(req, res) {
+    const secret = process.env.WITHINGS_BRIDGE_SECRET;
+    if (!secret) {
+        res.status(503).json({ error: 'Withings bridge not configured (WITHINGS_BRIDGE_SECRET missing)' });
+        return false;
+    }
+    const auth = req.headers['authorization'] || '';
+    if (auth !== `Bearer ${secret}`) {
+        res.status(401).json({ error: 'Unauthorized' });
+        return false;
+    }
+    return true;
+}
+
+app.get('/api/withings-token', (req, res) => {
+    if (!withingsBridgeAuth(req, res)) return;
+    try {
+        if (!fs.existsSync(WITHINGS_TOKEN_FILE)) {
+            return res.status(404).json({ error: 'No token stored yet' });
+        }
+        res.json(JSON.parse(fs.readFileSync(WITHINGS_TOKEN_FILE, 'utf8')));
+    } catch (e) {
+        res.status(500).json({ error: 'Failed to read token' });
+    }
+});
+
+app.put('/api/withings-token', (req, res) => {
+    if (!withingsBridgeAuth(req, res)) return;
+    if (!req.body || typeof req.body !== 'object') {
+        return res.status(400).json({ error: 'JSON body required' });
+    }
+    try {
+        fs.writeFileSync(WITHINGS_TOKEN_FILE, JSON.stringify(req.body, null, 2));
+        res.json({ ok: true });
+    } catch (e) {
+        res.status(500).json({ error: 'Failed to save token' });
+    }
+});
+
 // Start Server
 app.listen(PORT, () => {
     console.log(`Server running at http://localhost:${PORT}`);
